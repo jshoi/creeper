@@ -529,7 +529,7 @@
   <div class="intro-line quote" id="il-2">"잡을 수 있다면 잡아봐."</div>
   <div class="intro-line body" id="il-3">도망치는 바이러스를 추적하고</div>
   <div class="intro-line body" id="il-4">시스템을 구하라.</div>
-  <div id="intro-btn-wrap">
+  <div id="intro-btn-wrap" style="display:none">
     <button id="intro-start-btn">[ 시작 ]</button>
   </div>
 </div>
@@ -568,6 +568,7 @@
     <span style="color:#ffff00">⚡ 스테이지마다 30% 확률로 아이템 출현!</span><br>
     <span style="color:#ff4400">⚠ 리퍼가 방해합니다. 조심하세요!</span>
   </p>
+  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.1.0</p>
   <button id="btn-start">[ 시작 ]</button>
 </div>
 
@@ -1076,7 +1077,7 @@ class Creeper {
       addTrail(this.x + DRAW_W/2 - PX, this.y + DRAW_H - PX*2, '#1a6a1a');
 
     if (this.quoteTimer > 0) this.quoteTimer--;
-    else if (!this.isSmall && Math.random() < 0.003)
+      else if (!this.isSmall && Math.random() < 0.0015)
       this.showQuote(CREEPER_QUOTES[Math.floor(Math.random() * CREEPER_QUOTES.length)]);
 
     this.replicateTimer--;
@@ -1274,6 +1275,28 @@ class Reaper {
         updateUI();
         if (!this.quoteTimer) this.showQuote('삭제 완료.', 80);
         systemMsg(`리퍼가 크리퍼 #${nearestCreeper.id}를 삭제했습니다.`);
+        // ── 리퍼 삭제 보너스: 3마리마다 플레이어에게 속도 부스트 ──
+        reaperDeleteBonus++;
+        if (reaperDeleteBonus % 3 === 0) {
+          player.speedBoost      = true;
+          player.speedBoostTimer = Math.max(player.speedBoostTimer, 120); // 2초
+          spawnParticles(player.x + DRAW_W/2, player.y + DRAW_H/2, '#ffaa00', 16);
+          beep(440,'square',0.12,0.05); beep(660,'square',0.10,0.07,0.06);
+          player.showQuote('리퍼 분노 충전!', 100);
+          systemMsg(`★ 리퍼 삭제 ${reaperDeleteBonus}회 — 속도 부스트 2초 획득! (크리퍼들이 몰린다)`);
+          // 생존 크리퍼들을 플레이어 방향으로 살짝 밀어줌 (포획 기회 증가)
+          for (const c of creepers) {
+            if (!c.alive || c.isEgg) continue;
+            const pc2 = playerRef ? playerRef.center() : null;
+            if (!pc2) continue;
+            const dx2 = pc2.x - (c.x + DRAW_W/2);
+            const dy2 = pc2.y - (c.y + DRAW_H/2);
+            const dd2 = Math.hypot(dx2, dy2) || 1;
+            // 리퍼를 피해 달아나던 크리퍼가 플레이어 방향으로 혼란 이동
+            c.vx += (dx2/dd2) * 0.8;
+            c.vy += (dy2/dd2) * 0.8;
+          }
+        }
       }
     }
 
@@ -1572,6 +1595,7 @@ const player = new Player();
 let creepers  = [];
 let reapers   = [];
 let caughtCount = 0, erasedCount = 0;
+let reaperDeleteBonus = 0; // 리퍼 삭제 연속 카운터 (3마다 이점 발동)
 let gameTime = 0, totalTime = 0;
 let running  = false, reaperSpawned = false;
 let invincible = false;
@@ -1866,6 +1890,7 @@ function startStage() {
   screenShake = 0;
   gameTime = 0; reaperSpawned = false; invincible = false;
   stageClearPending = false;
+  reaperDeleteBonus = 0;
   trails.length = 0; particles.length = 0;
   hitCooldown = 0;
 
@@ -2758,9 +2783,9 @@ function showIntro() {
     }, lineDelays[i]);
   }
 
-  // 버튼은 마지막 줄 이후 등장
+  // 마지막 줄 이후 자동으로 게임 시작 (버튼 없이)
   setTimeout(() => {
-    document.getElementById('intro-btn-wrap').classList.add('visible');
+    startGameFromIntro();
   }, 4200);
 }
 
