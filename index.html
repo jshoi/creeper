@@ -1631,7 +1631,7 @@ function stageConfig(s) {
     maxReapers     : Math.min(1 + Math.floor(t / 2), 4),
     reaperBoost    : t * 0.22,
     reaperAccel    : Math.min(0.15 + t * 0.02, 0.32),
-    invincibleTime : 300, // 무적 5초 고정
+    invincibleTime : 120, // 무적 2초 고정
     spawnOnCatch   : s >= 5 ? 3 : 2,
     bg             : STAGE_BG[Math.min(t, STAGE_BG.length - 1)],
     clearBonus     : 500 + t * 200,
