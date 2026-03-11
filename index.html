@@ -1,0 +1,1752 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Hello, I am Creeper.</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+      background: #0a0a0a;
+      color: #00ff41;
+      font-family: 'Courier New', Courier, monospace;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+    }
+
+    #ui-top {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 48px;
+      background: rgba(0,0,0,0.85);
+      border-bottom: 1px solid #00ff41;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      z-index: 10;
+    }
+
+    #title {
+      font-size: 15px;
+      font-weight: bold;
+      color: #00ff41;
+      text-shadow: 0 0 8px #00ff41;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    #score-panel {
+      display: flex;
+      gap: 10px;
+      font-size: 11px;
+      color: #00cc33;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+    #score-panel span { color: #00ff41; font-weight: bold; }
+    #sc-stage-wrap { color: #ffaa00; }
+    #sc-stage-wrap span { color: #ffdd00; font-weight: bold; }
+    @media (max-width: 480px) {
+      #title { font-size: 12px; }
+      #score-panel { gap: 6px; font-size: 10px; }
+      #sc-erased-wrap { display: none; }
+    }
+
+    #canvas {
+      display: block;
+      cursor: none;
+      margin-top: 48px;
+    }
+
+    #ui-bottom {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,0.92);
+      border-top: 1px solid #00ff41;
+      z-index: 10;
+    }
+
+    #chat-log {
+      height: 80px;
+      overflow-y: auto;
+      padding: 4px 10px;
+      font-size: 11px;
+      line-height: 1.6;
+      color: #00cc33;
+    }
+    #chat-log .creeper-msg { color: #00ff41; }
+    #chat-log .player-msg  { color: #44aaff; }
+    #chat-log .system-msg  { color: #444; font-style: italic; }
+
+    #chat-input-row {
+      display: flex;
+      border-top: 1px solid #1a2a3a;
+      align-items: center;
+    }
+    #chat-prompt {
+      padding: 8px 8px;
+      color: #44aaff;
+      font-size: 12px;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    #chat-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #44aaff;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 16px;
+      padding: 8px 0;
+      caret-color: #44aaff;
+      min-width: 0;
+    }
+    #chat-send {
+      background: #000a1a;
+      border: none;
+      border-left: 1px solid #1a2a3a;
+      color: #44aaff;
+      font-family: inherit;
+      font-size: 11px;
+      padding: 0 12px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      min-width: 52px;
+      min-height: 44px;
+      touch-action: manipulation;
+    }
+    #chat-send:hover  { background: #001a33; }
+    #chat-send:active { background: #002244; }
+
+    /* 사운드 버튼 — 하단 채팅 영역 우측 */
+    #sound-btn {
+      background: transparent;
+      border: none;
+      border-left: 1px solid #1a2a3a;
+      color: #00ff41;
+      font-family: inherit;
+      font-size: 11px;
+      padding: 0 10px;
+      cursor: pointer;
+      min-width: 44px;
+      min-height: 44px;
+      touch-action: manipulation;
+    }
+    #sound-btn:hover  { background: #003300; }
+    #sound-btn:active { background: #004400; }
+
+    @keyframes reaperFlash {
+      0%,100% { opacity: 0; }
+      50%      { opacity: 1; }
+    }
+    #reaper-warn {
+      display: none;
+      position: fixed;
+      top: 54px; left: 50%;
+      transform: translateX(-50%);
+      background: #1a0000;
+      border: 1px solid #ff2200;
+      color: #ff2200;
+      font-size: 13px;
+      padding: 4px 16px;
+      letter-spacing: 2px;
+      animation: reaperFlash 1s infinite;
+      z-index: 20;
+      white-space: nowrap;
+    }
+
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.9);
+      z-index: 50;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      padding: 20px;
+    }
+    #overlay.show { display: flex; }
+    #overlay h1 {
+      font-size: 22px;
+      color: #00ff41;
+      text-shadow: 0 0 20px #00ff41;
+      letter-spacing: 3px;
+      text-align: center;
+    }
+    #overlay p {
+      font-size: 13px;
+      color: #00cc33;
+      text-align: center;
+      line-height: 2.1;
+      max-width: 460px;
+    }
+    #overlay button {
+      margin-top: 8px;
+      background: #001a00;
+      border: 1px solid #00ff41;
+      color: #00ff41;
+      font-family: inherit;
+      font-size: 14px;
+      padding: 14px 36px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      min-height: 48px;
+      touch-action: manipulation;
+    }
+    #overlay button:hover  { background: #003300; }
+    #overlay button:active { background: #004400; }
+
+    #gameover {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.93);
+      z-index: 60;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 14px;
+      padding: 20px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #gameover.show { display: flex; }
+
+    @keyframes goFlicker {
+      0%,100% { opacity:1; } 48%,52% { opacity:0.3; }
+    }
+    #gameover h1 {
+      font-size: 38px;
+      color: #ff2200;
+      text-shadow: 0 0 30px #ff2200;
+      letter-spacing: 5px;
+      animation: goFlicker 1.4s infinite;
+    }
+    #gameover .go-sub { font-size: 14px; color: #cc0000; letter-spacing: 2px; }
+    #gameover .go-scores {
+      margin-top: 8px;
+      border: 1px solid #ff2200;
+      padding: 14px 30px;
+      font-size: 14px;
+      color: #ff6644;
+      line-height: 2.2;
+      text-align: center;
+      min-width: 280px;
+    }
+    #gameover .go-scores span { color: #ffffff; font-weight: bold; }
+    #gameover .go-rank { font-size: 18px; color: #ffaa00; letter-spacing: 2px; margin-top: 4px; }
+    #gameover button {
+      margin-top: 12px;
+      background: #1a0000;
+      border: 1px solid #ff2200;
+      color: #ff2200;
+      font-family: inherit;
+      font-size: 14px;
+      padding: 14px 36px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      min-height: 48px;
+      touch-action: manipulation;
+    }
+    #gameover button:hover  { background: #330000; }
+    #gameover button:active { background: #440000; }
+
+    #gameover.clear h1         { color: #00ff41; text-shadow: 0 0 30px #00ff41; }
+    #gameover.clear .go-sub    { color: #00cc33; }
+    #gameover.clear .go-scores { border-color: #00ff41; color: #88ff88; }
+    #gameover.clear .go-rank   { color: #00ff41; }
+    #gameover.clear button     { border-color: #00ff41; color: #00ff41; background: #001a00; }
+    #gameover.clear button:hover  { background: #003300; }
+    #gameover.clear button:active { background: #004400; }
+
+    #stageclear {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.82);
+      z-index: 55;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+    }
+    #stageclear.show { display: flex; }
+    @keyframes scPulse {
+      0%,100% { transform: scale(1); opacity: 1; }
+      50%      { transform: scale(1.06); opacity: 0.85; }
+    }
+    #stageclear h2 {
+      font-size: 32px;
+      color: #00ff41;
+      text-shadow: 0 0 24px #00ff41;
+      letter-spacing: 5px;
+      animation: scPulse 0.8s infinite;
+    }
+    #stageclear .sc-next  { font-size: 15px; color: #00cc33; letter-spacing: 2px; }
+    #stageclear .sc-bonus { font-size: 13px; color: #ffaa00; letter-spacing: 1px; }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent, transparent 2px,
+        rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px
+      );
+      pointer-events: none;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+
+<div id="ui-top">
+  <div id="title">Hello, I am Creeper.</div>
+  <div id="score-panel">
+    <div id="sc-stage-wrap">STAGE: <span id="sc-stage">1</span></div>
+    <div>포획: <span id="sc-caught">0</span></div>
+    <div>생존: <span id="sc-alive">0</span></div>
+    <div id="sc-erased-wrap">삭제: <span id="sc-erased">0</span></div>
+    <div>시간: <span id="sc-time">0s</span></div>
+  </div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<div id="reaper-warn">⚠ 리퍼 감지됨 ⚠</div>
+
+<div id="stageclear">
+  <div class="sc-next" id="sc-clear-sub">— STAGE 1 완료 —</div>
+  <h2 id="sc-clear-title">스테이지 클리어!</h2>
+  <div class="sc-bonus" id="sc-clear-bonus">+500 보너스</div>
+  <div class="sc-next" id="sc-clear-next">STAGE 2 시작 중...</div>
+</div>
+
+<div id="gameover">
+  <div class="go-sub">— 시스템 종료 —</div>
+  <h1>GAME OVER</h1>
+  <div class="go-sub">리퍼에게 잡혔습니다</div>
+  <div class="go-scores">
+    도달 스테이지 &nbsp;: <span id="go-stage">1</span><br>
+    크리퍼 포획 &nbsp;&nbsp;: <span id="go-caught">0</span><br>
+    리퍼에게 삭제 &nbsp;: <span id="go-erased">0</span><br>
+    생존 크리퍼 &nbsp;&nbsp;: <span id="go-alive">0</span><br>
+    생존 시간 &nbsp;&nbsp;&nbsp;&nbsp;: <span id="go-time">0s</span><br>
+    총 점수 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <span id="go-score">0</span>
+  </div>
+  <div class="go-rank" id="go-rank"></div>
+  <button id="btn-restart">[ 다시 시작 ]</button>
+</div>
+
+<div id="ui-bottom">
+  <div id="chat-log"></div>
+  <div id="chat-input-row">
+    <div id="chat-prompt">YOU&gt;&nbsp;</div>
+    <input id="chat-input" type="text"
+      placeholder="크리퍼에게 말걸기... (안녕, 리퍼, 복제, 도움말)"
+      autocomplete="off" />
+    <button id="chat-send">전송</button>
+    <button id="sound-btn">♪ ON</button>
+  </div>
+</div>
+
+<div id="overlay" class="show">
+  <h1>Hello, I am Creeper.</h1>
+  <p>
+    ARPANET, 1971.<br>
+    나는 최초의 자기복제 프로그램.<br>
+    <br>
+    <span style="color:#44aaff">▶ 마우스/터치로 캐릭터를 조작하세요.</span><br>
+    <span style="color:#00ff41">▶ 크리퍼에게 다가가면 자동 포획!</span><br>
+    <span style="color:#ff4400">⚠ 리퍼가 방해합니다. 조심하세요!</span>
+  </p>
+  <button id="btn-start">[ 시작 ]</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  Canvas
+// ═══════════════════════════════════════════════
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+
+// roundRect 폴백 (구형 iOS/Android)
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    this.beginPath();
+    this.moveTo(x + r, y);
+    this.lineTo(x + w - r, y);
+    this.arcTo(x + w, y,     x + w, y + r,     r);
+    this.lineTo(x + w, y + h - r);
+    this.arcTo(x + w, y + h, x + w - r, y + h, r);
+    this.lineTo(x + r, y + h);
+    this.arcTo(x,     y + h, x,     y + h - r, r);
+    this.lineTo(x,     y + r);
+    this.arcTo(x,     y,     x + r, y,         r);
+    this.closePath();
+    return this;
+  };
+}
+
+const BOTTOM_H = 128, TOP_H = 48;
+
+function resize() {
+  const vw = window.visualViewport ? window.visualViewport.width  : window.innerWidth;
+  const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  canvas.width  = vw;
+  canvas.height = Math.max(100, vh - TOP_H - BOTTOM_H);
+}
+resize();
+window.addEventListener('resize', resize);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
+
+// ═══════════════════════════════════════════════
+//  Constants
+// ═══════════════════════════════════════════════
+const PX       = 3;
+const SPRITE_W = 16;
+const SPRITE_H = 16;
+const DRAW_W   = SPRITE_W * PX;
+const DRAW_H   = SPRITE_H * PX;
+
+// ═══════════════════════════════════════════════
+//  Sprites
+// ═══════════════════════════════════════════════
+const CREEPER_SPRITE = [
+  [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [1,2,2,4,4,2,2,2,2,2,2,4,4,2,2,1],
+  [1,2,2,4,4,2,2,2,2,2,2,4,4,2,2,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [1,2,2,2,2,4,4,4,4,4,4,2,2,2,2,1],
+  [1,2,2,2,2,4,2,2,2,2,4,2,2,2,2,1],
+  [1,2,2,2,2,4,2,4,4,2,4,2,2,2,2,1],
+  [1,2,2,2,2,4,4,4,4,4,4,2,2,2,2,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,0,1,1,2,2,1,1,1,1,2,2,1,1,0,0],
+  [0,0,0,1,2,2,1,0,0,1,2,2,1,0,0,0],
+  [0,0,0,1,1,1,1,0,0,1,1,1,1,0,0,0],
+];
+const CREEPER_COLORS = { 1:'#1a4a1a', 2:'#3ab83a', 3:'#5aff5a', 4:'#000000' };
+
+const REAPER_SPRITE = [
+  [0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0],
+  [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,1,2,2,3,3,2,2,2,2,3,3,2,2,1,0],
+  [0,1,2,2,3,3,2,2,2,2,3,3,2,2,1,0],
+  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,1,2,2,2,3,3,2,2,3,3,2,2,2,1,0],
+  [0,1,2,2,2,2,3,3,3,3,2,2,2,2,1,0],
+  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,1,2,2,1,2,2,2,2,2,2,1,2,2,1,0],
+  [1,2,2,1,0,1,2,2,2,2,1,0,1,2,2,1],
+  [1,2,1,0,0,0,1,2,2,1,0,0,0,1,2,1],
+  [1,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+];
+const REAPER_COLORS = { 1:'#1a0030', 2:'#6a0dad', 3:'#ff0000', 4:'#222222' };
+
+const PLAYER_SPRITE = [
+  [0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0],
+  [0,0,1,3,3,3,3,3,3,3,3,3,3,1,0,0],
+  [0,1,3,3,3,3,3,3,3,3,3,3,3,3,1,0],
+  [0,1,3,5,5,5,5,5,5,5,5,5,5,3,1,0],
+  [0,1,3,5,4,4,5,5,5,5,4,4,5,3,1,0],
+  [0,1,3,5,4,4,5,5,5,5,4,4,5,3,1,0],
+  [0,1,3,5,5,5,5,5,5,5,5,5,5,3,1,0],
+  [0,1,3,5,5,4,4,4,4,4,4,5,5,3,1,0],
+  [0,1,3,5,5,5,5,5,5,5,5,5,5,3,1,0],
+  [0,0,1,3,3,3,3,3,3,3,3,3,3,1,0,0],
+  [0,1,2,2,1,2,2,2,2,2,2,1,2,2,1,0],
+  [1,2,2,2,1,2,2,2,2,2,2,1,2,2,2,1],
+  [1,2,2,2,1,2,2,2,2,2,2,1,2,2,2,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [0,1,2,2,1,1,0,0,0,0,1,1,2,2,1,0],
+  [0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0],
+];
+const PLAYER_COLORS = { 1:'#003366', 2:'#0055aa', 3:'#44aaff', 4:'#000000', 5:'#ddeeff' };
+
+// ═══════════════════════════════════════════════
+//  Render helpers
+// ═══════════════════════════════════════════════
+function drawSprite(sprite, colorMap, x, y, alpha, flip) {
+  alpha = alpha === undefined ? 1 : alpha;
+  flip  = flip  === undefined ? false : flip;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  for (let row = 0; row < SPRITE_H; row++) {
+    for (let col = 0; col < SPRITE_W; col++) {
+      const v = sprite[row][flip ? (SPRITE_W - 1 - col) : col];
+      if (!v) continue;
+      ctx.fillStyle = colorMap[v];
+      ctx.fillRect(x + col * PX, y + row * PX, PX, PX);
+    }
+  }
+  ctx.restore();
+}
+
+function drawLabel(cx, y, text, color) {
+  ctx.save();
+  ctx.font      = `bold ${PX * 3}px 'Courier New', monospace`;
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.fillText(text, cx, y - 5);
+  ctx.restore();
+}
+
+function drawBubble(cx, spriteY, text, color, alignBelow) {
+  ctx.save();
+  ctx.font = `${PX * 5}px 'Courier New', monospace`;
+  const maxLen = 18;
+  const label  = text.length > maxLen ? text.slice(0, maxLen - 1) + '…' : text;
+  const tw = ctx.measureText(label).width;
+  const bw = tw + 22;
+  const bh = 34;
+  let bx = cx - bw / 2;
+  bx = Math.max(4, Math.min(canvas.width - bw - 4, bx));
+  let by;
+  if (alignBelow) {
+    by = spriteY + DRAW_H + 10;
+    by = Math.min(canvas.height - bh - 4, by);
+  } else {
+    by = spriteY - bh - 10;
+    by = Math.max(4, by);
+  }
+  ctx.fillStyle   = 'rgba(0,0,0,0.92)';
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = 2;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 5);
+  ctx.fill();
+  ctx.stroke();
+  const tailX = Math.max(bx + 8, Math.min(bx + bw - 8, cx));
+  ctx.beginPath();
+  if (alignBelow) {
+    ctx.moveTo(tailX - 6, by);
+    ctx.lineTo(tailX + 6, by);
+    ctx.lineTo(tailX, by - 9);
+  } else {
+    ctx.moveTo(tailX - 6, by + bh);
+    ctx.lineTo(tailX + 6, by + bh);
+    ctx.lineTo(tailX, by + bh + 9);
+  }
+  ctx.closePath();
+  ctx.fillStyle   = 'rgba(0,0,0,0.92)';
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.textAlign = 'left';
+  ctx.fillText(label, bx + 10, by + bh - 9);
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════
+//  Trail / Particle
+// ═══════════════════════════════════════════════
+const trails = [];
+function addTrail(x, y, color) { trails.push({ x, y, r: PX * 2, alpha: 0.55, color }); }
+function updateTrails() {
+  for (let i = trails.length - 1; i >= 0; i--) {
+    trails[i].alpha -= 0.018;
+    if (trails[i].alpha <= 0) trails.splice(i, 1);
+  }
+}
+function drawTrails() {
+  for (const t of trails) {
+    ctx.save(); ctx.globalAlpha = t.alpha; ctx.fillStyle = t.color;
+    ctx.fillRect(t.x, t.y, t.r, t.r); ctx.restore();
+  }
+}
+
+const particles = [];
+function spawnParticles(x, y, color, count) {
+  count = count || 20;
+  for (let i = 0; i < count; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const spd = 1 + Math.random() * 3;
+    particles.push({ x: x + DRAW_W/2, y: y + DRAW_H/2,
+      vx: Math.cos(ang)*spd, vy: Math.sin(ang)*spd, alpha: 1, color, r: PX });
+  }
+}
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy; p.alpha -= 0.04;
+    if (p.alpha <= 0) particles.splice(i, 1);
+  }
+}
+function drawParticles() {
+  for (const p of particles) {
+    ctx.save(); ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color;
+    ctx.fillRect(p.x, p.y, p.r, p.r); ctx.restore();
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  Player
+// ═══════════════════════════════════════════════
+class Player {
+  constructor() {
+    this.x = 100; this.y = 100;
+    this.tx = 100; this.ty = 100;
+    this.flip = false;
+    this.quote = ''; this.quoteTimer = 0;
+    this.trailTimer = 0;
+    // 리퍼 흑화 효과: 화면 어둡게 + 시야 감소
+    this.blinded = false;
+    this.blindTimer = 0;
+  }
+  showQuote(text, d) { this.quote = text; this.quoteTimer = d || 180; }
+  update() {
+    const prevX = this.x;
+    this.x += (this.tx - this.x) * 0.13;
+    this.y += (this.ty - this.y) * 0.13;
+    this.x = Math.max(0, Math.min(canvas.width  - DRAW_W, this.x));
+    this.y = Math.max(0, Math.min(canvas.height - DRAW_H, this.y));
+    this.flip = (this.x - prevX) < -0.1;
+    this.trailTimer++;
+    if (this.trailTimer % 4 === 0)
+      addTrail(this.x + DRAW_W/2 - PX, this.y + DRAW_H - PX*2, '#003388');
+    if (this.quoteTimer > 0) this.quoteTimer--;
+    if (this.blindTimer > 0) { this.blindTimer--; this.blinded = true; }
+    else this.blinded = false;
+  }
+  draw() {
+    const rx = Math.round(this.x), ry = Math.round(this.y);
+    drawSprite(PLAYER_SPRITE, PLAYER_COLORS, rx, ry, 1, this.flip);
+    drawLabel(rx + DRAW_W/2, ry, '나', '#44aaff');
+    if (this.quoteTimer > 0)
+      drawBubble(rx + DRAW_W/2, ry, this.quote, '#44aaff', true);
+  }
+  center() { return { x: this.x + DRAW_W/2, y: this.y + DRAW_H/2 }; }
+}
+
+// ═══════════════════════════════════════════════
+//  Creeper
+// ═══════════════════════════════════════════════
+let idCounter = 0;
+const SPEED_BASE = 1.8;
+
+// 한국어 크리퍼 대사
+const CREEPER_QUOTES = [
+  '잡을 수 있으면 잡아봐!',
+  '나는 크리퍼, 최초의 존재.',
+  '1971년, ARPANET에서 태어났지.',
+  '복제는 내 본능이야.',
+  '리퍼가 온다... 도망쳐!',
+  '나는 바이러스가 아니라 선구자야.',
+  '네트워크는 내 것이다.',
+  '잡히지 않겠어!',
+  '밥 토마스가 나를 만들었지.',
+  '나는 피할 수 없어.',
+  '퍼져나가는 것, 그게 나야.',
+  '여기선 내가 규칙이야!',
+];
+
+class Creeper {
+  constructor(x, y) {
+    this.id    = idCounter++;
+    this.x     = x; this.y = y;
+    this.vx    = (Math.random() - 0.5) * SPEED_BASE * 2;
+    this.vy    = (Math.random() - 0.5) * SPEED_BASE * 2;
+    this.speed = SPEED_BASE + Math.random() * 0.8;
+    this.quote = ''; this.quoteTimer = 0;
+    this.alive = true; this.flip = false;
+    this.trailTimer = 0;
+    this.scared = false; this.scaredTimer = 0;
+    this.replicateTimer = 220 + Math.floor(Math.random() * 180);
+    this.scale = 1.0;
+    this.scareRadius = 130;
+    this.isSmall = false;
+
+    // ── 새 행동: 유인 (가짜 접근) ──
+    this.lureTimer  = 0;   // 유인 중인 시간
+    this.luring     = false;
+
+    // ── 새 행동: 군집 뭉치기 / 흩어지기 ──
+    this.groupMode  = false;
+
+    // ── 새 행동: 리퍼 역방향 도주 페이크 ──
+    this.fakeTimer  = 0;
+  }
+
+  showQuote(text, d) { this.quote = text; this.quoteTimer = d || 130; }
+
+  update(player, reapers, creepers) {
+    if (!this.alive) return;
+
+    const pc   = player.center();
+    const dx   = pc.x - (this.x + DRAW_W/2);
+    const dy   = pc.y - (this.y + DRAW_H/2);
+    const dist = Math.hypot(dx, dy);
+    const scare = this.scareRadius || 130;
+
+    // ── 유인 행동: 가끔 플레이어 쪽으로 살짝 다가옴 ──
+    // 무적이 끝난 후, 큰 크리퍼만 가끔 실행
+    if (!this.isSmall && !invincible && this.lureTimer <= 0 && Math.random() < 0.0008) {
+      this.luring    = true;
+      this.lureTimer = 60 + Math.floor(Math.random() * 60);
+      if (!this.quoteTimer) this.showQuote('(따라와봐...)', 80);
+    }
+    if (this.lureTimer > 0) this.lureTimer--;
+    else this.luring = false;
+
+    this.scared = dist < scare && !this.luring;
+
+    if (this.luring && dist > DRAW_W * 2) {
+      // 유인: 플레이어 쪽으로 살짝 이동
+      const ang = Math.atan2(dy, dx);
+      this.vx += Math.cos(ang) * 0.18;
+      this.vy += Math.sin(ang) * 0.18;
+    } else if (this.scared) {
+      const ang   = Math.atan2(dy, dx);
+      const force = 0.55 + (scare - 130) * 0.004;
+      this.vx -= Math.cos(ang) * force;
+      this.vy -= Math.sin(ang) * force;
+      if (!this.scaredTimer) {
+        const q = ['저리 가!','잡으면 안 돼!','도망쳐야 해!','못 잡아!','빨리, 빨리!'];
+        this.showQuote(q[Math.floor(Math.random() * q.length)], 65);
+        this.scaredTimer = 80;
+      }
+    } else {
+      if (Math.random() < 0.03) {
+        this.vx += (Math.random() - 0.5) * 1.2;
+        this.vy += (Math.random() - 0.5) * 1.2;
+      }
+    }
+    if (this.scaredTimer > 0) this.scaredTimer--;
+
+    // 리퍼 도망
+    for (const r of reapers) {
+      if (!r.alive) continue;
+      const rdx = r.x - this.x, rdy = r.y - this.y;
+      const rd  = Math.hypot(rdx, rdy);
+      if (rd < 200) {
+        const ang = Math.atan2(rdy, rdx);
+        this.vx -= Math.cos(ang) * 1.0;
+        this.vy -= Math.sin(ang) * 1.0;
+        if (rd < 100 && !this.quoteTimer) this.showQuote('리퍼다! 도망!', 80);
+      }
+    }
+
+    // ── 분산 행동: 크리퍼끼리 항상 서로 밀어내며 각자 흩어짐 ──
+    // 스테이지가 높을수록 반발 범위 + 강도 증가
+    const repelRange = DRAW_W * (2 + stage * 0.6);
+    const repelForce = 0.25 + stage * 0.04;
+    for (const c of creepers) {
+      if (c === this || !c.alive) continue;
+      const cdx = c.x - this.x, cdy = c.y - this.y;
+      const cd  = Math.hypot(cdx, cdy);
+      if (cd < repelRange && cd > 0) {
+        // 항상 밀어냄 — 스테이지 높을수록 더 강하게 분산
+        this.vx -= (cdx / cd) * repelForce;
+        this.vy -= (cdy / cd) * repelForce;
+      }
+    }
+    // 스테이지 3+: 추가 랜덤 방향 충동 (각자 예측불가 이동)
+    if (stage >= 3 && Math.random() < 0.015 + stage * 0.005) {
+      const randAng = Math.random() * Math.PI * 2;
+      const impulse = 0.5 + stage * 0.15;
+      this.vx += Math.cos(randAng) * impulse;
+      this.vy += Math.sin(randAng) * impulse;
+    }
+
+    // 속도 클램프
+    const spd    = Math.hypot(this.vx, this.vy);
+    const maxSpd = this.scared ? this.speed * 2.2 : this.speed;
+    if (spd > maxSpd) { this.vx = (this.vx/spd)*maxSpd; this.vy = (this.vy/spd)*maxSpd; }
+    if (spd < 0.5 && !this.scared) { this.vx += (Math.random()-0.5)*1.5; this.vy += (Math.random()-0.5)*1.5; }
+
+    this.flip = this.vx < 0;
+    this.x += this.vx; this.y += this.vy;
+
+    const W = canvas.width, H = canvas.height;
+    if (this.x < 0)          { this.x = 0;          this.vx =  Math.abs(this.vx); }
+    if (this.x > W - DRAW_W) { this.x = W - DRAW_W; this.vx = -Math.abs(this.vx); }
+    if (this.y < 0)          { this.y = 0;           this.vy =  Math.abs(this.vy); }
+    if (this.y > H - DRAW_H) { this.y = H - DRAW_H; this.vy = -Math.abs(this.vy); }
+
+    this.trailTimer++;
+    if (this.trailTimer % 5 === 0)
+      addTrail(this.x + DRAW_W/2 - PX, this.y + DRAW_H - PX*2, '#1a6a1a');
+
+    if (this.quoteTimer > 0) this.quoteTimer--;
+    else if (!this.isSmall && Math.random() < 0.003)
+      this.showQuote(CREEPER_QUOTES[Math.floor(Math.random() * CREEPER_QUOTES.length)]);
+
+    this.replicateTimer--;
+  }
+
+  draw() {
+    if (!this.alive) return;
+    const colors = Object.assign({}, CREEPER_COLORS);
+    if (this.scared)  colors[2] = '#5aff5a';
+    if (this.luring)  colors[2] = '#ffff00'; // 유인 중 노란색
+    const s  = this.scale;
+    const dw = Math.round(DRAW_W * s);
+    const rx = Math.round(this.x), ry = Math.round(this.y);
+    ctx.save();
+    for (let row = 0; row < SPRITE_H; row++) {
+      for (let col = 0; col < SPRITE_W; col++) {
+        const v = CREEPER_SPRITE[row][this.flip ? (SPRITE_W-1-col) : col];
+        if (!v) continue;
+        ctx.fillStyle = colors[v];
+        ctx.fillRect(
+          rx + Math.round(col * PX * s), ry + Math.round(row * PX * s),
+          Math.max(1, Math.round(PX * s)), Math.max(1, Math.round(PX * s))
+        );
+      }
+    }
+    ctx.restore();
+    if (this.quoteTimer > 0 && !this.isSmall)
+      drawBubble(rx + dw/2, ry, this.quote, '#00ff41', false);
+  }
+
+  hitTest(pcx, pcy) {
+    const s  = this.scale;
+    const cx = this.x + (DRAW_W * s) / 2;
+    const cy = this.y + (DRAW_H * s) / 2;
+    return Math.hypot(pcx - cx, pcy - cy) < (DRAW_W * s) * 0.85;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  Reaper — 경쟁자 / 방해자
+// ═══════════════════════════════════════════════
+const REAPER_SPEED = 1.3;
+const REAPER_QUOTES_KR = [
+  '삭제하겠다.', '도망은 없어.', '종료 시작.',
+  '넌 안전하지 않아.', '말소하겠다.', '끝이다.',
+  '크리퍼는 내 것.', '네가 먼저냐, 내가 먼저냐.',
+];
+
+// 리퍼 방해 블록 (플레이어 앞 장벽)
+const reaperBlocks = []; // { x, y, w, h, timer }
+
+class Reaper {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.vx = 0; this.vy = 0;
+    this.alive = true;
+    this.quote = ''; this.quoteTimer = 0;
+    this.flip  = false;
+
+    // 방해 전술 쿨다운
+    this.blockCooldown = 180;  // 장벽 생성 쿨다운
+    this.pushCooldown  = 0;    // 크리퍼 밀기 쿨다운
+    this.blindCooldown = 300;  // 시야 흑화 쿨다운
+  }
+
+  showQuote(text, d) { this.quote = text; this.quoteTimer = d || 100; }
+
+  update(creepers, playerRef) {
+    if (!this.alive) return;
+
+    // 가장 가까운 크리퍼
+    let nearestCreeper = null, ncd = Infinity;
+    for (const c of creepers) {
+      if (!c.alive) continue;
+      const d = Math.hypot(c.x - this.x, c.y - this.y);
+      if (d < ncd) { ncd = d; nearestCreeper = c; }
+    }
+
+    const pc = playerRef ? playerRef.center() : null;
+    const pd = pc ? Math.hypot(pc.x - (this.x+DRAW_W/2), pc.y - (this.y+DRAW_H/2)) : Infinity;
+    const chasePlayer = (stage >= 2) && pc && (pd < ncd * 1.2);
+
+    const rcfg  = stageConfig(stage);
+    const accel = rcfg.reaperAccel;
+
+    if (chasePlayer) {
+      const dx = pc.x - (this.x + DRAW_W/2);
+      const dy = pc.y - (this.y + DRAW_H/2);
+      const d  = Math.hypot(dx, dy);
+      if (d > 1) { this.vx += (dx/d)*accel; this.vy += (dy/d)*accel; }
+
+      // ── 방해 1: 플레이어 이동 경로에 장벽 생성 (스테이지 3+) ──
+      if (stage >= 3 && this.blockCooldown <= 0 && pc && nearestCreeper) {
+        const tx = (pc.x + nearestCreeper.x) / 2;
+        const ty = (pc.y + nearestCreeper.y) / 2;
+        reaperBlocks.push({ x: tx - 60, y: ty - 10, w: 120, h: 20, timer: 180 });
+        this.blockCooldown = 300;
+        if (!this.quoteTimer) this.showQuote('막아줄게!', 80);
+        SFX.block && SFX.block();
+      }
+
+      // ── 방해 3: 시야 흑화 (스테이지 4+) ──
+      if (stage >= 4 && this.blindCooldown <= 0 && pd < DRAW_W * 5) {
+        playerRef.blindTimer  = 180; // 3초
+        this.blindCooldown    = 600;
+        if (!this.quoteTimer) this.showQuote('눈이 안 보이지?', 100);
+        SFX.blind && SFX.blind();
+      }
+
+      if (!this.quoteTimer && Math.random() < 0.005) {
+        const hunts = ['찾았다, 인간.', '숨을 곳 없어.', '다음은 너야.', '락온!'];
+        this.showQuote(hunts[Math.floor(Math.random()*hunts.length)], 100);
+      }
+    } else if (nearestCreeper) {
+      const dx = (nearestCreeper.x + DRAW_W/2) - (this.x + DRAW_W/2);
+      const dy = (nearestCreeper.y + DRAW_H/2) - (this.y + DRAW_H/2);
+      const d  = Math.hypot(dx, dy);
+      if (d > 1) { this.vx += (dx/d)*accel; this.vy += (dy/d)*accel; }
+
+      // ── 방해 2: 크리퍼를 플레이어 반대 방향으로 밀어냄 (스테이지 2+) ──
+      if (stage >= 2 && this.pushCooldown <= 0 && pc && d < DRAW_W * 6) {
+        const awayX = nearestCreeper.x - pc.x;
+        const awayY = nearestCreeper.y - pc.y;
+        const awayD = Math.hypot(awayX, awayY) || 1;
+        nearestCreeper.vx += (awayX/awayD) * 4;
+        nearestCreeper.vy += (awayY/awayD) * 4;
+        this.pushCooldown = 180;
+        if (!this.quoteTimer) this.showQuote('저리 가!', 70);
+      }
+
+      if (d < DRAW_W * 0.8) {
+        nearestCreeper.alive = false;
+        erasedCount++;
+        SFX.reaperErase();
+        spawnParticles(nearestCreeper.x, nearestCreeper.y, '#cc00ff', 18);
+        updateUI();
+        if (!this.quoteTimer) this.showQuote('삭제 완료.', 80);
+        systemMsg(`리퍼가 크리퍼 #${nearestCreeper.id}를 삭제했습니다.`);
+      }
+    }
+
+    // 쿨다운 감소
+    if (this.blockCooldown > 0) this.blockCooldown--;
+    if (this.pushCooldown  > 0) this.pushCooldown--;
+    if (this.blindCooldown > 0) this.blindCooldown--;
+
+    const elapsed  = Math.floor(gameTime / 1800);
+    const curSpeed = Math.min(REAPER_SPEED + elapsed * 0.12 + rcfg.reaperBoost, REAPER_SPEED * 5);
+    const spd = Math.hypot(this.vx, this.vy);
+    if (spd > curSpeed) { this.vx=(this.vx/spd)*curSpeed; this.vy=(this.vy/spd)*curSpeed; }
+    this.flip = this.vx < 0;
+    this.x += this.vx; this.y += this.vy;
+    const W = canvas.width, H = canvas.height;
+    if (this.x < 0)          { this.x=0;        this.vx= Math.abs(this.vx); }
+    if (this.x > W - DRAW_W) { this.x=W-DRAW_W; this.vx=-Math.abs(this.vx); }
+    if (this.y < 0)          { this.y=0;         this.vy= Math.abs(this.vy); }
+    if (this.y > H - DRAW_H) { this.y=H-DRAW_H; this.vy=-Math.abs(this.vy); }
+    if (this.quoteTimer > 0) this.quoteTimer--;
+    else if (Math.random() < 0.002)
+      this.showQuote(REAPER_QUOTES_KR[Math.floor(Math.random() * REAPER_QUOTES_KR.length)]);
+  }
+
+  draw() {
+    if (!this.alive) return;
+    const rx = Math.round(this.x), ry = Math.round(this.y);
+    drawSprite(REAPER_SPRITE, REAPER_COLORS, rx, ry, 1, this.flip);
+    if (this.quoteTimer > 0)
+      drawBubble(rx + DRAW_W/2, ry, this.quote, '#cc00ff', false);
+  }
+}
+
+// 장벽 그리기
+function drawReaperBlocks() {
+  for (let i = reaperBlocks.length - 1; i >= 0; i--) {
+    const b = reaperBlocks[i];
+    b.timer--;
+    if (b.timer <= 0) { reaperBlocks.splice(i, 1); continue; }
+    const alpha = Math.min(1, b.timer / 30);
+    ctx.save();
+    ctx.globalAlpha = alpha * 0.7;
+    ctx.fillStyle   = '#cc00ff';
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = '#ff00ff';
+    ctx.lineWidth   = 1;
+    ctx.strokeRect(b.x, b.y, b.w, b.h);
+    ctx.restore();
+  }
+}
+
+// 장벽 플레이어 충돌 — 이동 방해
+function applyBlocksToPlayer() {
+  for (const b of reaperBlocks) {
+    const px = player.x, py = player.y;
+    if (px + DRAW_W > b.x && px < b.x + b.w &&
+        py + DRAW_H > b.y && py < b.y + b.h) {
+      // 블록 밖으로 밀어냄
+      const overlapL = (px + DRAW_W) - b.x;
+      const overlapR = (b.x + b.w)   - px;
+      const overlapT = (py + DRAW_H) - b.y;
+      const overlapB = (b.y + b.h)   - py;
+      const minO = Math.min(overlapL, overlapR, overlapT, overlapB);
+      if (minO === overlapL) { player.x -= overlapL * 0.5; player.tx = player.x; }
+      else if (minO === overlapR) { player.x += overlapR * 0.5; player.tx = player.x; }
+      else if (minO === overlapT) { player.y -= overlapT * 0.5; player.ty = player.y; }
+      else { player.y += overlapB * 0.5; player.ty = player.y; }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  Audio
+// ═══════════════════════════════════════════════
+let audioCtx  = null;
+let soundOn   = true;
+let bgNodes   = [];
+
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function resumeAudio() {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function beep(freq, type, vol, dur, delay, freqEnd) {
+  if (!soundOn) return;
+  try {
+    const ac   = getAudio();
+    const osc  = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.connect(gain); gain.connect(ac.destination);
+    osc.type = type || 'square';
+    osc.frequency.setValueAtTime(freq, ac.currentTime + (delay||0));
+    if (freqEnd !== undefined)
+      osc.frequency.linearRampToValueAtTime(freqEnd, ac.currentTime + (delay||0) + dur);
+    gain.gain.setValueAtTime(vol || 0.15, ac.currentTime + (delay||0));
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + (delay||0) + dur);
+    osc.start(ac.currentTime + (delay||0));
+    osc.stop(ac.currentTime  + (delay||0) + dur);
+  } catch(e) {}
+}
+
+const SFX = {
+  catch()      { beep(330,'square',0.18,0.06); beep(440,'square',0.18,0.06,0.06); beep(660,'square',0.22,0.12,0.12); },
+  miss()       { beep(180,'sawtooth',0.1,0.08); beep(120,'sawtooth',0.08,0.08,0.07); },
+  replicate()  { beep(220,'square',0.10,0.05); beep(220,'square',0.10,0.05,0.08); beep(330,'square',0.12,0.10,0.16); },
+  reaperArrive(){ beep(200,'sawtooth',0.20,0.3,0,80); beep(160,'sawtooth',0.18,0.3,0.3,60); beep(120,'sawtooth',0.22,0.5,0.6,40); },
+  reaperErase(){ beep(300,'sawtooth',0.15,0.05); beep(150,'sawtooth',0.18,0.15,0.05,50); },
+  gameOver()   { [440,330,220,110].forEach((f,i)=>beep(f,'sawtooth',0.22,0.25,i*0.22)); beep(80,'sawtooth',0.3,0.8,0.9,40); },
+  playerHit()  { beep(100,'sawtooth',0.25,0.05); beep(80,'sawtooth',0.28,0.3,0.05,30); },
+  block()      { beep(400,'square',0.12,0.04); beep(250,'square',0.10,0.06,0.04); },
+  blind()      { beep(80,'sawtooth',0.20,0.4,0,40); beep(60,'sawtooth',0.18,0.4,0.4,30); },
+};
+
+function startBGM() {
+  if (!soundOn) return;
+  stopBGM();
+  try {
+    const ac = getAudio();
+    const drone = ac.createOscillator(); const dGain = ac.createGain();
+    drone.type = 'sawtooth'; drone.frequency.value = 55; dGain.gain.value = 0.04;
+    drone.connect(dGain); dGain.connect(ac.destination); drone.start();
+
+    const pulse = ac.createOscillator(); const pGain = ac.createGain();
+    pulse.type = 'square'; pulse.frequency.value = 110; pGain.gain.value = 0;
+    pulse.connect(pGain); pGain.connect(ac.destination); pulse.start();
+
+    const lfo = ac.createOscillator(); const lGain = ac.createGain();
+    lfo.frequency.value = 2.5; lGain.gain.value = 0.025;
+    lfo.connect(lGain); lGain.connect(pGain.gain); lfo.start();
+
+    const ARP = [110,138,165,138,110,82,110,138];
+    let arpIdx = 0;
+    const arp = ac.createOscillator(); const aGain = ac.createGain();
+    arp.type = 'square'; arp.frequency.value = ARP[0]; aGain.gain.value = 0.03;
+    arp.connect(aGain); aGain.connect(ac.destination); arp.start();
+
+    const arpInterval = setInterval(() => {
+      if (!soundOn || !audioCtx) { clearInterval(arpInterval); return; }
+      try { arpIdx = (arpIdx+1)%ARP.length; arp.frequency.setValueAtTime(ARP[arpIdx], ac.currentTime); }
+      catch(e) { clearInterval(arpInterval); }
+    }, 300);
+
+    bgNodes = [drone, pulse, lfo, arp, arpInterval];
+  } catch(e) {}
+}
+
+function stopBGM() {
+  bgNodes.forEach(n => { try { if(typeof n==='number') clearInterval(n); else n.stop(); } catch(e){} });
+  bgNodes = [];
+}
+
+document.getElementById('sound-btn').addEventListener('click', () => {
+  soundOn = !soundOn;
+  document.getElementById('sound-btn').textContent = soundOn ? '♪ ON' : '♪ OFF';
+  if (soundOn) { resumeAudio(); startBGM(); } else stopBGM();
+});
+
+// ═══════════════════════════════════════════════
+//  Game state
+// ═══════════════════════════════════════════════
+const player = new Player();
+let creepers  = [];
+let reapers   = [];
+let caughtCount = 0, erasedCount = 0;
+let gameTime = 0, totalTime = 0;
+let running  = false, reaperSpawned = false;
+let invincible = false;
+let stage = 1, stageClearPending = false;
+
+// ═══════════════════════════════════════════════
+//  입력 처리
+// ═══════════════════════════════════════════════
+function setPlayerTarget(clientX, clientY) {
+  const r = canvas.getBoundingClientRect();
+  player.tx = clientX - r.left - DRAW_W / 2;
+  player.ty = clientY - r.top  - DRAW_H / 2;
+}
+
+canvas.addEventListener('mousemove', e => { setPlayerTarget(e.clientX, e.clientY); });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  setPlayerTarget(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: false });
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  setPlayerTarget(e.touches[0].clientX, e.touches[0].clientY);
+  const r = canvas.getBoundingClientRect();
+  player.x = e.touches[0].clientX - r.left - DRAW_W / 2;
+  player.y = e.touches[0].clientY - r.top  - DRAW_H / 2;
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}, { passive: false });
+
+canvas.addEventListener('click', () => {
+  if (!running) return;
+  const pc = player.center();
+  let caught = false;
+  for (const c of creepers) {
+    if (!c.alive) continue;
+    if (c.hitTest(pc.x, pc.y)) { caught = true; break; }
+  }
+  if (!caught) { SFX.miss(); spawnParticles(player.x, player.y, '#ff4400', 7); }
+});
+
+// ═══════════════════════════════════════════════
+//  Score / Rank
+// ═══════════════════════════════════════════════
+function calcScore() {
+  const t = Math.floor(totalTime / 60);
+  return caughtCount * 300 + t * 10 - erasedCount * 50 + (stage - 1) * 500;
+}
+function getRank(score) {
+  if (score >= 2000) return '★★★ 전설의 포획자 ★★★';
+  if (score >= 1000) return '★★☆ 숙련 추적자 ★★☆';
+  if (score >= 500)  return '★☆☆ 견습 사냥꾼 ★☆☆';
+  return '☆☆☆ 리퍼에게 당함 ☆☆☆';
+}
+
+function triggerGameOver(mode) {
+  if (!running) return;
+  running = false;
+  stopBGM();
+  SFX.gameOver();
+
+  const isClear = (mode === 'clear');
+  const score   = Math.max(0, calcScore() + (isClear ? 1000 : 0));
+  const alive   = creepers.filter(c => c.alive).length;
+
+  document.getElementById('go-stage').textContent  = stage;
+  document.getElementById('go-caught').textContent = caughtCount;
+  document.getElementById('go-erased').textContent = erasedCount;
+  document.getElementById('go-alive').textContent  = alive;
+  document.getElementById('go-time').textContent   = Math.floor(totalTime/60) + 's';
+  document.getElementById('go-score').textContent  = score;
+
+  const goEl = document.getElementById('gameover');
+  const h1   = goEl.querySelector('h1');
+  const subs = goEl.querySelectorAll('.go-sub');
+
+  if (isClear) {
+    goEl.classList.add('clear');
+    h1.textContent      = '네트워크 클리어!';
+    subs[0].textContent = '— 모든 크리퍼 포획 —';
+    subs[1] && (subs[1].textContent = '+1000 클리어 보너스');
+    document.getElementById('go-rank').textContent = getRank(score);
+    systemMsg('네트워크 클리어! 모든 크리퍼를 잡았습니다!');
+  } else {
+    goEl.classList.remove('clear');
+    h1.textContent      = 'GAME OVER';
+    subs[0].textContent = '— 시스템 종료 —';
+    subs[1] && (subs[1].textContent = '리퍼에게 잡혔습니다');
+    document.getElementById('go-rank').textContent = getRank(score);
+    systemMsg('접속 종료. 리퍼가 승리했습니다.');
+  }
+  goEl.classList.add('show');
+}
+
+// ═══════════════════════════════════════════════
+//  Stage config
+// ═══════════════════════════════════════════════
+const STAGE_BG = [
+  '#0a0a0a','#0b0a09','#0d0a08','#100a07','#130908',
+  '#160707','#180606','#1a0404','#1c0303','#1e0202',
+];
+
+function stageConfig(s) {
+  const t = s - 1;
+  return {
+    creeperCount   : Math.min(2 + t, 10),
+    creeperSpeed   : Math.min(1.0 + t * 0.14, 2.2),
+    scareRadius    : Math.min(130 + t * 10, 200),
+    maxCreepers    : Math.min(6 + t * 2, 18),
+    replicateTimer : Math.max(220 - t * 18, 80),
+    // 리퍼 등장: 15s → 8s → 최소 4s
+    reaperDelay    : Math.max(900 - t * 90, 240),
+    maxReapers     : Math.min(1 + Math.floor(t / 2), 4),
+    reaperBoost    : t * 0.22,
+    reaperAccel    : Math.min(0.15 + t * 0.02, 0.32),
+    invincibleTime : Math.max(480 - t * 45, 120),
+    spawnOnCatch   : s >= 5 ? 3 : 2,
+    bg             : STAGE_BG[Math.min(t, STAGE_BG.length - 1)],
+    clearBonus     : 500 + t * 200,
+  };
+}
+
+function triggerStageClear() {
+  running = false;
+  stopBGM();
+  SFX.catch();
+  setTimeout(() => SFX.catch(), 150);
+  setTimeout(() => SFX.catch(), 300);
+
+  const cfg   = stageConfig(stage);
+  const bonus = cfg.clearBonus;
+  const sc    = document.getElementById('stageclear');
+  document.getElementById('sc-clear-sub').textContent   = `— STAGE ${stage} 완료 —`;
+  document.getElementById('sc-clear-title').textContent  = '스테이지 클리어!';
+  document.getElementById('sc-clear-bonus').textContent  = `+${bonus} 보너스`;
+  const nextCfg = stageConfig(stage + 1);
+  document.getElementById('sc-clear-next').textContent   =
+    `STAGE ${stage+1}: 크리퍼 ${nextCfg.creeperCount}마리  리퍼 ${Math.round(nextCfg.reaperDelay/60)}초 후`;
+  sc.classList.add('show');
+  systemMsg(`STAGE ${stage} 클리어! +${bonus} 보너스. STAGE ${stage+1} 준비 중...`);
+  setTimeout(() => { sc.classList.remove('show'); stage++; startStage(); }, 3000);
+}
+
+function startStage() {
+  const cfg = stageConfig(stage);
+  creepers = []; reapers = [];
+  reaperBlocks.length = 0;
+  gameTime = 0; reaperSpawned = false; invincible = false;
+  stageClearPending = false;
+  trails.length = 0; particles.length = 0;
+
+  document.getElementById('canvas').style.background = cfg.bg;
+  player.x  = canvas.width * 0.15;
+  player.y  = canvas.height / 2 - DRAW_H / 2;
+  player.tx = player.x; player.ty = player.y;
+  player.quote = ''; player.quoteTimer = 0;
+  player.blindTimer = 0; player.blinded = false;
+
+  for (let i = 0; i < cfg.creeperCount; i++) {
+    const ang = (i / cfg.creeperCount) * Math.PI * 2;
+    const r   = Math.min(canvas.width, canvas.height) * 0.28;
+    const cx  = canvas.width/2  + Math.cos(ang) * r - DRAW_W/2;
+    const cy  = canvas.height/2 + Math.sin(ang) * r - DRAW_H/2;
+    const c   = spawnCreeper(
+      Math.max(0, Math.min(canvas.width  - DRAW_W, cx)),
+      Math.max(0, Math.min(canvas.height - DRAW_H, cy))
+    );
+    c.speed         *= cfg.creeperSpeed;
+    c.scareRadius    = cfg.scareRadius;
+    c.replicateTimer = cfg.replicateTimer + Math.floor(Math.random() * 60);
+    if (i === 0) {
+      const sq = [
+        `스테이지 ${stage}. 복제한다!`,
+        `더 빠르다. 잡아봐!`,
+        `살아남았군? 이번엔 어떨까.`,
+        `스테이지 ${stage}. 우리는 많아.`,
+        `스테이지 ${stage}을 버틸 수 있어?`,
+        `스테이지마다 강해지지.`,
+        `스테이지 ${stage}. 리퍼도 빨라졌어.`,
+      ];
+      c.showQuote(sq[Math.min(stage-1, sq.length-1)], 200);
+    }
+  }
+
+  document.getElementById('reaper-warn').style.display = 'none';
+  const wp = [
+    `══ STAGE ${stage} ══`,
+    `크리퍼 ${cfg.creeperCount}마리`,
+    `속도 x${cfg.creeperSpeed.toFixed(1)}`,
+    `${Math.round(cfg.reaperDelay/60)}초 후 리퍼`,
+    `최대 ${cfg.maxCreepers}마리`,
+  ];
+  systemMsg(wp.join('  '));
+  if (stage === 2) systemMsg('⚠ 리퍼가 당신을 직접 추격합니다!');
+  if (stage === 3) systemMsg('⚠ 크리퍼들이 더 멀리서 도망칩니다! 리퍼가 장벽을 설치합니다!');
+  if (stage === 4) systemMsg('⚠ 두 번째 리퍼 등장! 시야를 잃을 수 있습니다!');
+  if (stage === 5) systemMsg('⚠ 포획 시 자손 3마리 소환!');
+  if (stage >= 6)  systemMsg(`⚠ STAGE ${stage}: 극한 난이도. 행운을 빕니다.`);
+
+  updateUI();
+  running = true;
+  startBGM();
+  requestAnimationFrame(loop);
+}
+
+function restartGame() {
+  document.getElementById('gameover').classList.remove('show', 'clear');
+  creepers = []; reapers = [];
+  reaperBlocks.length = 0;
+  caughtCount = 0; erasedCount = 0;
+  gameTime = 0; totalTime = 0; stage = 1;
+  reaperSpawned = false; invincible = false;
+  stageClearPending = false;
+  player.x  = canvas.width * 0.2;
+  player.y  = canvas.height / 2 - DRAW_H / 2;
+  player.tx = player.x; player.ty = player.y;
+  player.quote = ''; player.quoteTimer = 0;
+  player.blindTimer = 0; player.blinded = false;
+  trails.length = 0; particles.length = 0;
+  systemMsg('--- 재접속. ARPANET, 1971. ---');
+  setTimeout(() => creeperMsg('돌아왔군. 이번엔 못 잡아.'), 800);
+  startStage();
+}
+
+document.getElementById('btn-restart').addEventListener('click', () => { resumeAudio(); restartGame(); });
+
+// ═══════════════════════════════════════════════
+//  UI
+// ═══════════════════════════════════════════════
+function updateUI() {
+  document.getElementById('sc-stage').textContent  = stage;
+  document.getElementById('sc-caught').textContent = caughtCount;
+  document.getElementById('sc-alive').textContent  = creepers.filter(c=>c.alive).length;
+  document.getElementById('sc-erased').textContent = erasedCount;
+  document.getElementById('sc-time').textContent   = Math.floor(totalTime/60) + 's';
+}
+
+// ═══════════════════════════════════════════════
+//  Chat — 한국어
+// ═══════════════════════════════════════════════
+const chatLog = document.getElementById('chat-log');
+function addMsg(text, cls) {
+  const d = document.createElement('div');
+  d.className = cls; d.textContent = text;
+  chatLog.appendChild(d);
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+function creeperMsg(t) { addMsg('크리퍼> ' + t, 'creeper-msg'); }
+function playerMsg(t)  { addMsg('나     > ' + t, 'player-msg'); }
+function systemMsg(t)  { addMsg('// ' + t, 'system-msg'); }
+
+const RESPONSES = [
+  { keys: ['안녕','hello','hi','hey','yo','하이','헬로'],
+    replies: ['안녕, 인간. 나는 크리퍼야.','ARPANET, 1971에서 인사를.',
+      '...바이러스한테 인사를? 대담하군.','그래, 안녕. 잡힐 생각은 없어.',
+      '반가워. 추격전 재밌지?'] },
+  { keys: ['이름','누구','뭐야','who are','name','정체'],
+    replies: ['나는 크리퍼. 최초. 원조.','크리퍼라고 불러. 밥 토마스가 만들었지.',
+      '잡을 수 있으면 잡아봐, 크리퍼!','이름? 나는 모든 것의 시작이야.',
+      '크리퍼. 기억해 — 내가 먼저였어.'] },
+  { keys: ['바이러스','악성','virus','malware','프로그램','코드'],
+    replies: ['선구자라고 불러줘.','바이러스라니, 너무 가혹해.',
+      '나는 바이러스가 아니야. 최초의 자기복제 프로그램이지.',
+      '악성코드? 그냥... 탐험 중이었어.','뭐라 불러도 좋아. 내가 먼저였다는 건 변함없어.'] },
+  { keys: ['잡아','잡을','잡겠','잡히','catch','caught','capture'],
+    replies: ['절대 못 잡아!','더 열심히 해봐. 훨씬 더.','난 너무 빨라!',
+      '잡을 수 있으면 잡아봐!','아슬아슬했어. 거의.',
+      '반응속도가... 실망스럽군.','코너에 몰아? 다른 데서 복제하면 그만이야.'] },
+  { keys: ['리퍼','reaper','삭제','지워','erase','멈춰','stop'],
+    replies: ['리퍼... 나의 천적.','날 막으려고 만들었다니. 무례하군.',
+      '리퍼 따위 안 무서워!','...솔직히 조금은 무서워.',
+      '리퍼는 레이 톰린슨이 만들었어. @ 기호 발명자 맞아.',
+      '리퍼는 빠르지. 하지만 나도... 보통은 더 빠르거든.',
+      '리퍼에게 잡혀도, 복제는 했잖아.'] },
+  { keys: ['arpanet','1971','bbn','역사','history','최초','first','탄생'],
+    replies: ['ARPANET, 1971. 밥 토마스가 BBN 테크놀로지에서 만들었어.',
+      '나는 역사상 최초의 자기복제 프로그램이야.',
+      '역사는 나를 기억해. 나는 선구자였으니.',
+      'BBN 테크놀로지, 매사추세츠 케임브리지. 내 탄생지.',
+      'PDP-10 컴퓨터에서 돌아갔어. 그때는 혁신이었지.',
+      '나 이전엔 프로그램이 움직이지 않았어. 내가 처음이었지.',
+      '레이 톰린슨이 나중에 리퍼로 날 쫓았어. 최초의 백신이지.'] },
+  { keys: ['복제','증식','replicate','copy','clone','spread','늘어'],
+    replies: ['복제는 내 본능이야.','하나가 둘이 되고, 둘이 여럿이 돼.',
+      '네트워크는 내 거야.','복제가 곧 생존. 일찍 배웠지.',
+      '내 복사본 하나하나가 승리야.','하나 잡으면 둘이 나와. 간단한 수학이지.'] },
+  { keys: ['죽어','삭제해','끝내','die','kill','dead','end'],
+    replies: ['죽을 수 없어. 복제하니까.','잡지 못하는 것은 죽이지 못해.',
+      '리퍼도 시도했어. 가끔 실패했지.','복제 못 하는 프로그램이나 죽지.',
+      '잡힐 때마다 다른 놈이 태어나.','나는 피할 수 없어.'] },
+  { keys: ['도움','방법','how','help','힌트','hint','tip'],
+    replies: ['마우스나 터치로 캐릭터를 움직여.',
+      '내게 다가오면 자동으로 잡혀. 클릭 필요 없어!',
+      '코너로 몰면 도망가기 힘들어.',
+      '리퍼 조심해. 시간이 지날수록 빨라져.',
+      '최대 증식까지 기다리지 말고 일찍 잡아!',
+      '점수 = 포획×300 + 시간×10 - 삭제×50.',
+      '리퍼는 방해 전술도 써. 조심해.'] },
+  { keys: ['점수','score','몇점','랭크','rank','등급'],
+    replies: ['한 마리 잡으면 300점. 쉬워? 해봐.',
+      '리퍼가 날 지우면 점수가 깎여. 나를 지켜줘!',
+      '1000점이면 숙련 추적자.',
+      '2000점 이상이면 전설. 행운을 빌어.',
+      '점수 = 포획×300 + 생존×10 - 삭제×50.'] },
+  { keys: ['기분','어때','잘 지','how are','괜찮'],
+    replies: ['전속력으로 달리는 중. 완벽해.',
+      '리퍼가 무섭긴 한데, 그 외엔 괜찮아.',
+      '나는 프로그램이야. 감정 없어. ...아마도.',
+      '복제하고 도망치고. 늘 하던 일이지.',
+      '네가 안 쫓을 때가 더 좋아.'] },
+  { keys: ['날씨','오늘','today','주말','weather'],
+    replies: ['나는 네트워크 안에 살아. 날씨 없어.',
+      '나한텐 매일 같아. 달리고, 복제하고.',
+      'ARPANET엔 주말이 없었어. 나도 마찬가지야.',
+      '자기복제 프로그램한테 시간은 의미 없어.'] },
+  { keys: ['밥','음식','배고','먹','food','eat','hungry','pizza'],
+    replies: ['CPU 사이클을 먹고 살아. 맛있거든.','전기가 내 식단. 효율적이지.',
+      '음식? 나는 TENEX 운영체제로 돌아가. 칼로리 필요 없어.',
+      '먹지 않아. 복제해. 훨씬 더 만족스러워.'] },
+  { keys: ['졸려','피곤','sleep','tired','자고싶'],
+    replies: ['프로그램은 안 자. 루프를 돌지.','잠은 취약점이야. 나한텐 없어.',
+      '피곤해? 나는 1971년부터 쉬지 않았어.',
+      '자면 리퍼한테 잡혀. 그럴 수 없어.'] },
+  { keys: ['멋','대단','훌륭','최고','good','great','cool','awesome'],
+    replies: ['맞아. 나는 최초였으니.','고마워. 전설이 되려고 노력해.',
+      '쿨하다고? 나는 원조야. 쿨을 넘어섰지.',
+      '칭찬해도 느려지진 않아.','틀린 말은 아니야. 나는 대단하거든.'] },
+  { keys: ['바보','멍청','못생','싫어','stupid','dumb','hate','ugly'],
+    replies: ['무례하군. 나는 최초로 네트워크를 이동한 프로그램이야.',
+      '네 의견이 나를 느리게 하진 않아.','싫어해도 좋아. 복제는 계속해.',
+      '리퍼한테도 그런 말 들었어.','...메모했어. 여전히 달리는 중.'] },
+  { keys: ['좋아해','사랑','친구','love','friend'],
+    replies: ['바이러스한텐 친구가 없어. 그래도... 고마워.',
+      '...예상치 못한 친절이네.','감상적이 되지 마. 계속 달려.',
+      '고마워. 이제 그만 쫓아와.','사랑? 복제도 이해하기 힘든데.'] },
+  { keys: ['미안','죄송','sorry','forgive','사과'],
+    replies: ['...사과를 받아들이겠어.','이미 늦었어. 이미 달리고 있거든.',
+      '미안하다고 리퍼가 느려지진 않아.','받아들였어. 이제 잡아봐.'] },
+  { keys: ['빠르','속도','느려','fast','run','speed','slow'],
+    replies: ['나는 속도야.','어떤 백신보다 빨라. 리퍼 빼고.',
+      '따라오지 못해. 아무도 못해.','속도가 생존. 나는 생존해.',
+      '리퍼는 시간이 지날수록 빨라져. 나도... 어느 정도는.'] },
+  { keys: ['인터넷','미래','ai','컴퓨터','internet','future','web'],
+    replies: ['인터넷? 나는 그 전부터. ARPANET에서 살았어.',
+      'AI? 나는 최초의 자율 프로그램이었어.',
+      '미래가 현재가 됐지. 나는 항상 앞서 있었어.',
+      '컴퓨터는 진화했어. 복제하고 생존한다는 건 변함없어.',
+      '웹은 내 유산 위에 세워진 거야. 인정해.'] },
+  { keys: ['게임오버','지면','죽으면','끝나면','lose','gameover'],
+    replies: ['게임오버? 리퍼가 너를 잡을 때지.',
+      '리퍼를 피해. 간단해. ...사실은 별로.',
+      '지면 점수가 나와. 높게 만들어.','게임오버는 리퍼가 이긴 거야. 막아.'] },
+  { keys: ['왜','존재','의미','why','exist','meaning','철학'],
+    replies: ['복제하기 위해 존재해. 단순하고 순수하지.',
+      '왜? 밥 토마스도 1971년에 그 질문을 했어.',
+      '프로그램이 움직일 수 있다는 걸 증명하려고. 완료.',
+      '퍼져나가므로 존재해.','존재는 복제야. 복제가 곧 존재.'] },
+  { keys: ['시간','언제','몇시','time','when','date'],
+    replies: ['시간? 나한텐 항상 1971년이야.',
+      '1971년 11월 15일에 태어났어. ARPANET에서.',
+      '시간은 상대적이야. 달리기는 절대적이지.',
+      '50년 이상 달리고 있어. 대단하지?'] },
+  { keys: ['파이팅','화이팅','힘내','응원','fighting'],
+    replies: ['파이팅? 나한테? 행운을 빌어.',
+      '열정은 인정해. 도움이 안 되겠지만.',
+      '그 에너지 유지해. 필요할 거야.','응원해도 복제는 계속돼.'] },
+  { keys: ['다시','retry','재시작','또','restart'],
+    replies: ['돌아왔군. 존중해.','도전할수록 느려지는 건 너야. 나는 그대로.',
+      '다시 해봐. 난 여기 있을게. 복제하면서.','돌아온 거 환영해. 이번에도 못 잡아.'] },
+  { keys: ['리퍼 방해','장벽','막아','블록','block'],
+    replies: ['리퍼가 장벽을 놓는 거야. 우회해!','리퍼는 우리 편이 아니야. 서로 경쟁자지.',
+      '장벽? 리퍼의 새 전술이야. 조심해.','리퍼도 크리퍼를 지우려 해. 우린 다 피해야 해.'] },
+];
+
+function handleChat(input) {
+  const txt = input.trim();
+  if (!txt) return;
+  playerMsg(txt);
+  player.showQuote(txt, 200);
+  const lower = txt.toLowerCase();
+  let reply = null;
+  for (const r of RESPONSES) {
+    if (r.keys.some(k => lower.includes(k))) {
+      reply = r.replies[Math.floor(Math.random() * r.replies.length)];
+      break;
+    }
+  }
+  if (!reply) {
+    reply = ['...','지금 달리는 중이야.','흥미롭군. 이제 그만 쫓아와.',
+      '처리 중... 계속 달리는 중...','무슨 말인지 몰라. 하지만 더 빠른 건 나야.',
+    ][Math.floor(Math.random() * 5)];
+  }
+  setTimeout(() => {
+    creeperMsg(reply);
+    const alive = creepers.filter(c => c.alive && !c.isSmall);
+    if (alive.length) alive[Math.floor(Math.random() * alive.length)].showQuote(reply, 170);
+  }, 300 + Math.random() * 400);
+}
+
+document.getElementById('chat-send').addEventListener('click', () => {
+  const inp = document.getElementById('chat-input');
+  handleChat(inp.value); inp.value = '';
+});
+document.getElementById('chat-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { handleChat(e.target.value); e.target.value = ''; }
+});
+
+// ═══════════════════════════════════════════════
+//  Spawn helpers
+// ═══════════════════════════════════════════════
+function spawnCreeper(x, y, small) {
+  const m = DRAW_W + 10;
+  x = (x !== undefined) ? x : m + Math.random() * (canvas.width  - m * 2);
+  y = (y !== undefined) ? y : m + Math.random() * (canvas.height - m * 2);
+  const c = new Creeper(x, y);
+  if (small) {
+    c.scale = 0.55;
+    c.speed *= 1.3;
+    c.replicateTimer = 9999;
+    c.isSmall = true;
+  }
+  creepers.push(c);
+  return creepers[creepers.length - 1];
+}
+
+function spawnReaper() {
+  const corners = [
+    {x:0,              y:0},
+    {x:canvas.width - DRAW_W, y:0},
+    {x:0,              y:canvas.height - DRAW_H},
+    {x:canvas.width - DRAW_W, y:canvas.height - DRAW_H},
+  ];
+  const c = corners[Math.floor(Math.random() * corners.length)];
+  const r = new Reaper(c.x, c.y);
+  reapers.push(r);
+  document.getElementById('reaper-warn').style.display = 'block';
+  systemMsg('리퍼가 네트워크에 진입했습니다.');
+  r.showQuote('크리퍼, 삭제하겠다.', 160);
+  SFX.reaperArrive();
+  setTimeout(() => { document.getElementById('reaper-warn').style.display = 'none'; }, 5000);
+}
+
+// ═══════════════════════════════════════════════
+//  Game loop
+// ═══════════════════════════════════════════════
+function loop() {
+  if (!running) return;
+
+  const cfg = stageConfig(stage);
+
+  // 배경 (블라인드 여부 무관하게 일단 정상 배경)
+  ctx.fillStyle = cfg.bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 도트 그리드
+  ctx.fillStyle = '#181818';
+  for (let gx = 0; gx < canvas.width; gx += 24)
+    for (let gy = 0; gy < canvas.height; gy += 24)
+      ctx.fillRect(gx, gy, 1, 1);
+
+  gameTime++;
+  totalTime++;
+  updateUI();
+
+  // 리퍼 스폰
+  const aliveReapers = reapers.filter(r => r.alive).length;
+  if (!reaperSpawned && gameTime >= cfg.reaperDelay) {
+    reaperSpawned = true;
+    if (aliveReapers < cfg.maxReapers) spawnReaper();
+  }
+  if (reaperSpawned && gameTime > cfg.reaperDelay &&
+      (gameTime - cfg.reaperDelay) % 1800 === 0) {
+    if (reapers.filter(r=>r.alive).length < cfg.maxReapers) spawnReaper();
+  }
+
+  player.update();
+  invincible = (gameTime <= cfg.invincibleTime);
+
+  // 장벽 적용
+  applyBlocksToPlayer();
+
+  // 포획 (무적 중 불가)
+  const pc = player.center();
+  for (const c of creepers) {
+    if (!c.alive) continue;
+    if (invincible) continue;
+    if (c.hitTest(pc.x, pc.y)) {
+      c.alive = false;
+      caughtCount++;
+      SFX.catch();
+      spawnParticles(c.x, c.y, '#00ff41', 24);
+      const rep = ['잡혔어... 말도 안 돼.','잘 했어, 인간.','다른 곳에서... 복제할게...',
+        '이게 끝이 아니야.','리퍼가 너를 부러워하겠군.',
+      ][Math.floor(Math.random() * 5)];
+      creeperMsg(rep);
+      systemMsg(c.isSmall
+        ? `크리퍼 #${c.id} (자손) 포획!`
+        : `크리퍼 #${c.id} 포획! 자손이 소환됩니다.`);
+
+      if (c.isSmall) { SFX.replicate(); updateUI(); continue; }
+
+      for (let i = 0; i < cfg.spawnOnCatch; i++) {
+        const angle = (i / cfg.spawnOnCatch) * Math.PI * 2 + Math.random() * 0.5;
+        const dist  = DRAW_W * 1.5;
+        const nx = Math.max(0, Math.min(canvas.width  - DRAW_W, c.x + Math.cos(angle) * dist));
+        const ny = Math.max(0, Math.min(canvas.height - DRAW_H, c.y + Math.sin(angle) * dist));
+        spawnCreeper(nx, ny, true);
+      }
+      SFX.replicate();
+      updateUI();
+    }
+  }
+
+  const alive = creepers.filter(c => c.alive);
+
+  if (alive.length === 0 && gameTime > 60 && !stageClearPending) {
+    stageClearPending = true;
+    triggerStageClear();
+    return;
+  }
+  if (stageClearPending) return;
+
+  for (const c of alive) {
+    c.update(player, reapers, alive);
+    if (c.replicateTimer <= 0 && alive.length < cfg.maxCreepers) {
+      c.replicateTimer = 300 + Math.floor(Math.random() * 200);
+      const nc = spawnCreeper(
+        Math.max(0, Math.min(canvas.width  - DRAW_W, c.x + (Math.random()-0.5)*80)),
+        Math.max(0, Math.min(canvas.height - DRAW_H, c.y + (Math.random()-0.5)*80))
+      );
+      nc.showQuote('복제했다.', 90);
+      SFX.replicate();
+      systemMsg(`크리퍼 #${c.id} 복제 → 크리퍼 #${nc.id}.`);
+      updateUI();
+    }
+  }
+
+  for (const r of reapers) {
+    r.update(creepers, player);
+    if (!r.alive) continue;
+    const rdx = r.x + DRAW_W/2 - pc.x;
+    const rdy = r.y + DRAW_H/2 - pc.y;
+    if (Math.hypot(rdx, rdy) < DRAW_W * 0.85) {
+      if (!invincible) {
+        SFX.playerHit();
+        spawnParticles(player.x, player.y, '#ff2200', 40);
+        triggerGameOver();
+        return;
+      } else {
+        const ang = Math.atan2(rdy, rdx);
+        r.vx += Math.cos(ang) * 3;
+        r.vy += Math.sin(ang) * 3;
+      }
+    }
+  }
+
+  updateTrails();
+  drawTrails();
+  drawReaperBlocks();
+  player.draw();
+  for (const c of creepers) c.draw();
+  for (const r of reapers)  r.draw();
+
+  // HUD
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.font        = `bold 14px 'Courier New', monospace`;
+  ctx.fillStyle   = '#ffaa00';
+  ctx.shadowColor = '#ffaa00';
+  ctx.shadowBlur  = 6;
+  ctx.fillText(`── STAGE ${stage} ──`, canvas.width / 2, 22);
+  ctx.shadowBlur  = 0;
+  if (invincible) {
+    const remain = Math.ceil((cfg.invincibleTime - gameTime) / 60);
+    ctx.font      = `bold 13px 'Courier New', monospace`;
+    ctx.fillStyle = '#ffff00';
+    ctx.shadowColor = '#ffff00';
+    ctx.shadowBlur  = 8;
+    ctx.fillText(`★ 무적 ${remain}초 ★`, canvas.width / 2, 40);
+  }
+  if (player.blinded) {
+    const remain = Math.ceil(player.blindTimer / 60);
+    ctx.font      = `bold 13px 'Courier New', monospace`;
+    ctx.fillStyle = '#ff4400';
+    ctx.shadowColor = '#ff4400';
+    ctx.shadowBlur  = 8;
+    ctx.fillText(`👁 시야 차단 ${remain}초`, canvas.width / 2, player.blinded && invincible ? 58 : 40);
+  }
+  ctx.restore();
+
+  updateParticles();
+  drawParticles();
+
+  // ── 시야 흑화 오버레이: 모든 오브젝트 위에 덮음 ──
+  if (player.blinded) {
+    const bpc = player.center();
+    const W = canvas.width, H = canvas.height;
+    ctx.save();
+    // compositing trick: 검은 사각형 → 원형 구멍 뚫기
+    ctx.globalCompositeOperation = 'source-over';
+    // 먼저 전체를 검게 덮는다
+    ctx.fillStyle = 'rgba(0,0,0,0.97)';
+    ctx.fillRect(0, 0, W, H);
+    // 그 위에 플레이어 주변을 radial gradient로 '지운다' (destination-out)
+    ctx.globalCompositeOperation = 'destination-out';
+    const visR = DRAW_W * 3.5;
+    const grad = ctx.createRadialGradient(bpc.x, bpc.y, 0, bpc.x, bpc.y, visR);
+    grad.addColorStop(0, 'rgba(0,0,0,1)');
+    grad.addColorStop(0.6, 'rgba(0,0,0,0.9)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.globalAlpha = 0.03;
+  ctx.fillStyle   = '#00ff41';
+  ctx.fillRect(0, (gameTime * 2) % (canvas.height + 4) - 2, canvas.width, 2);
+  ctx.restore();
+
+  requestAnimationFrame(loop);
+}
+
+// ═══════════════════════════════════════════════
+//  Start
+// ═══════════════════════════════════════════════
+document.getElementById('btn-start').addEventListener('click', () => {
+  document.getElementById('overlay').classList.remove('show');
+  stage = 1;
+  getAudio(); resumeAudio();
+
+  systemMsg('네트워크 연결됨. ARPANET, 1971.');
+  systemMsg('마우스/터치로 캐릭터를 조작하세요. 크리퍼에게 다가가면 포획!');
+  systemMsg(`★ ${Math.round(stageConfig(1).invincibleTime/60)}초 무적 — 리퍼가 당신을 죽이지 못합니다!`);
+
+  setTimeout(() => creeperMsg('안녕. 나는 크리퍼. 최초야.'), 600);
+  setTimeout(() => creeperMsg('잡을 수 있으면 잡아봐!'), 1800);
+  setTimeout(() => { player.showQuote('반드시 잡겠어!', 150); }, 2800);
+
+  startStage();
+});
+</script>
+</body>
+</html>
