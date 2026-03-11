@@ -61,6 +61,13 @@
     #score-panel span { color: #00ff41; font-weight: bold; }
     #sc-stage-wrap { color: #ffaa00; }
     #sc-stage-wrap span { color: #ffdd00; font-weight: bold; }
+    #sc-hearts { color: #ff4444; font-size: 13px; letter-spacing: 2px; }
+    @keyframes heartHit {
+      0%,100% { transform: scale(1); }
+      30%      { transform: scale(1.5); color: #ff0000; }
+      60%      { transform: scale(0.8); }
+    }
+    #sc-hearts.hit { animation: heartHit 0.4s ease; }
     @media (max-width: 480px) {
       #title { font-size: 12px; }
       #score-panel { gap: 6px; font-size: 10px; }
@@ -277,6 +284,98 @@
     #gameover.clear button:hover  { background: #003300; }
     #gameover.clear button:active { background: #004400; }
 
+    /* ── 퀴즈 오버레이 ── */
+    #quiz-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.97);
+      z-index: 80;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      padding: 24px;
+    }
+    #quiz-overlay.show { display: flex; }
+    #quiz-title {
+      font-size: 13px;
+      color: #ffaa00;
+      letter-spacing: 3px;
+      margin-bottom: 4px;
+    }
+    #quiz-badge {
+      font-size: 11px;
+      color: #666;
+      letter-spacing: 2px;
+    }
+    #quiz-question {
+      font-size: 16px;
+      color: #00ff41;
+      text-align: center;
+      line-height: 1.8;
+      max-width: 380px;
+      border: 1px solid #003300;
+      padding: 16px 20px;
+      background: #050f05;
+    }
+    #quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      max-width: 380px;
+    }
+    .quiz-btn {
+      background: #0a0a0a;
+      border: 1px solid #444;
+      color: #cccccc;
+      font-family: inherit;
+      font-size: 13px;
+      padding: 13px 16px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      text-align: left;
+      touch-action: manipulation;
+      transition: background 0.1s, border-color 0.1s, color 0.1s;
+    }
+    .quiz-btn:hover  { background: #111; border-color: #00ff41; color: #00ff41; }
+    .quiz-btn.correct { background: #003300 !important; border-color: #00ff41 !important; color: #00ff41 !important; }
+    .quiz-btn.wrong   { background: #330000 !important; border-color: #ff2200 !important; color: #ff4444 !important; }
+    #quiz-result {
+      font-size: 14px;
+      text-align: center;
+      min-height: 20px;
+      letter-spacing: 2px;
+    }
+    #quiz-result.ok  { color: #00ff41; }
+    #quiz-result.err { color: #ff2200; }
+    #quiz-continue {
+      display: none;
+      background: #001a00;
+      border: 1px solid #00ff41;
+      color: #00ff41;
+      font-family: inherit;
+      font-size: 13px;
+      padding: 13px 36px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      touch-action: manipulation;
+    }
+    #quiz-continue:hover { background: #003300; }
+    #quiz-give-up {
+      background: transparent;
+      border: 1px solid #440000;
+      color: #660000;
+      font-family: inherit;
+      font-size: 11px;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      touch-action: manipulation;
+    }
+    #quiz-give-up:hover { color: #ff2200; border-color: #ff2200; }
+
     #stageclear {
       display: none;
       position: fixed;
@@ -321,8 +420,9 @@
 
 <div id="ui-top">
   <div id="title">Hello, I am Creeper.</div>
-  <div id="score-panel">
+    <div id="score-panel">
     <div id="sc-stage-wrap">STAGE: <span id="sc-stage">1</span></div>
+    <div id="sc-hearts">♥♥♥</div>
     <div>포획: <span id="sc-caught">0</span></div>
     <div>생존: <span id="sc-alive">0</span></div>
     <div id="sc-erased-wrap">삭제: <span id="sc-erased">0</span></div>
@@ -347,6 +447,7 @@
   <div class="go-sub">리퍼에게 잡혔습니다</div>
   <div class="go-scores">
     도달 스테이지 &nbsp;: <span id="go-stage">1</span><br>
+    남은 하트 &nbsp;&nbsp;&nbsp;&nbsp;: <span id="go-hearts">♥♥♥</span><br>
     크리퍼 포획 &nbsp;&nbsp;: <span id="go-caught">0</span><br>
     리퍼에게 삭제 &nbsp;: <span id="go-erased">0</span><br>
     생존 크리퍼 &nbsp;&nbsp;: <span id="go-alive">0</span><br>
@@ -354,7 +455,17 @@
     총 점수 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <span id="go-score">0</span>
   </div>
   <div class="go-rank" id="go-rank"></div>
-  <button id="btn-restart">[ 다시 시작 ]</button>
+  <button id="btn-restart">[ 처음부터 시작 ]</button>
+</div>
+
+<div id="quiz-overlay">
+  <div id="quiz-title">[ 이어하기 챌린지 ]</div>
+  <div id="quiz-badge">문제를 맞히면 게임을 이어할 수 있습니다</div>
+  <div id="quiz-question"></div>
+  <div id="quiz-options"></div>
+  <div id="quiz-result"></div>
+  <button id="quiz-continue">[ 이어하기 ]</button>
+  <button id="quiz-give-up">포기하고 처음부터</button>
 </div>
 
 <div id="ui-bottom">
@@ -377,6 +488,8 @@
     <br>
     <span style="color:#44aaff">▶ 마우스/터치로 캐릭터를 조작하세요.</span><br>
     <span style="color:#00ff41">▶ 크리퍼에게 다가가면 자동 포획!</span><br>
+    <span style="color:#ff4444">♥ 하트 3개 — 리퍼 공격 시 1개 소모</span><br>
+    <span style="color:#ffff00">⚡ 스테이지마다 30% 확률로 아이템 출현!</span><br>
     <span style="color:#ff4400">⚠ 리퍼가 방해합니다. 조심하세요!</span>
   </p>
   <button id="btn-start">[ 시작 ]</button>
@@ -428,6 +541,10 @@ const SPRITE_W = 16;
 const SPRITE_H = 16;
 const DRAW_W   = SPRITE_W * PX;
 const DRAW_H   = SPRITE_H * PX;
+
+// 시야 흑화용 오프스크린 캔버스
+const blindCanvas = document.createElement('canvas');
+const blindCtx    = blindCanvas.getContext('2d');
 
 // ═══════════════════════════════════════════════
 //  Sprites
@@ -622,12 +739,19 @@ class Player {
     // 리퍼 흑화 효과: 화면 어둡게 + 시야 감소
     this.blinded = false;
     this.blindTimer = 0;
+    // 알 파괴 보너스: 일정 시간 크기 증가
+    this.scale      = 1.0;
+    this.scaleTimer = 0;
+    // 스피드 부스트 아이템
+    this.speedBoost     = false;
+    this.speedBoostTimer = 0;
   }
   showQuote(text, d) { this.quote = text; this.quoteTimer = d || 180; }
   update() {
     const prevX = this.x;
-    this.x += (this.tx - this.x) * 0.13;
-    this.y += (this.ty - this.y) * 0.13;
+    const lerpSpeed = this.speedBoost ? 0.22 : 0.13;
+    this.x += (this.tx - this.x) * lerpSpeed;
+    this.y += (this.ty - this.y) * lerpSpeed;
     this.x = Math.max(0, Math.min(canvas.width  - DRAW_W, this.x));
     this.y = Math.max(0, Math.min(canvas.height - DRAW_H, this.y));
     this.flip = (this.x - prevX) < -0.1;
@@ -637,10 +761,56 @@ class Player {
     if (this.quoteTimer > 0) this.quoteTimer--;
     if (this.blindTimer > 0) { this.blindTimer--; this.blinded = true; }
     else this.blinded = false;
+    if (this.scaleTimer > 0) { this.scaleTimer--; }
+    else this.scale = 1.0;
+    if (this.speedBoostTimer > 0) { this.speedBoostTimer--; this.speedBoost = true; }
+    else this.speedBoost = false;
   }
   draw() {
     const rx = Math.round(this.x), ry = Math.round(this.y);
+    const s  = this.scale;
+    ctx.save();
+    if (s !== 1.0) {
+      // 크기 증가 시 중심 기준으로 스케일
+      const cx = rx + DRAW_W / 2, cy = ry + DRAW_H / 2;
+      ctx.translate(cx, cy);
+      ctx.scale(s, s);
+      ctx.translate(-cx, -cy);
+    }
     drawSprite(PLAYER_SPRITE, PLAYER_COLORS, rx, ry, 1, this.flip);
+    ctx.restore();
+    // 크기 증가 중 강조 테두리
+    if (s > 1.0) {
+      ctx.save();
+      ctx.strokeStyle = '#ffff00';
+      ctx.lineWidth   = 2;
+      ctx.shadowColor = '#ffff00';
+      ctx.shadowBlur  = 8;
+      ctx.strokeRect(rx - 2, ry - 2, DRAW_W * s + 4, DRAW_H * s + 4);
+      ctx.restore();
+    }
+    // 스피드 부스트 중 노란 잔상
+    if (this.speedBoost) {
+      ctx.save();
+      ctx.strokeStyle = '#ffff00';
+      ctx.lineWidth   = 2;
+      ctx.shadowColor = '#ffff00';
+      ctx.shadowBlur  = 12;
+      ctx.globalAlpha = 0.7 + Math.sin(Date.now() / 80) * 0.3;
+      ctx.strokeRect(rx - 3, ry - 3, DRAW_W + 6, DRAW_H + 6);
+      ctx.restore();
+    }
+    // 피격 후 무적 중 빨간 점멸
+    if (hitCooldown > 0 && !invincible) {
+      ctx.save();
+      ctx.strokeStyle = '#ff4400';
+      ctx.lineWidth   = 2;
+      ctx.shadowColor = '#ff4400';
+      ctx.shadowBlur  = 10;
+      ctx.globalAlpha = Math.sin(Date.now() / 50) * 0.5 + 0.5;
+      ctx.strokeRect(rx - 2, ry - 2, DRAW_W + 4, DRAW_H + 4);
+      ctx.restore();
+    }
     drawLabel(rx + DRAW_W/2, ry, '나', '#44aaff');
     if (this.quoteTimer > 0)
       drawBubble(rx + DRAW_W/2, ry, this.quote, '#44aaff', true);
@@ -695,12 +865,44 @@ class Creeper {
 
     // ── 새 행동: 리퍼 역방향 도주 페이크 ──
     this.fakeTimer  = 0;
+
+    // ── 알(Egg) 상태 ──
+    this.isEgg      = false;  // true면 부화 전 egg
+    this.eggTimer   = 0;      // egg 남은 시간 (120프레임 = 2초)
   }
 
   showQuote(text, d) { this.quote = text; this.quoteTimer = d || 130; }
 
   update(player, reapers, creepers) {
     if (!this.alive) return;
+
+    // ── Egg 부화 대기 ──
+    if (this.isEgg) {
+      this.eggTimer--;
+      if (this.eggTimer <= 0) {
+        this.isEgg = false;
+        this.showQuote('부화!', 60);
+        spawnParticles(this.x + DRAW_W/2, this.y + DRAW_H/2, '#88ff88', 10);
+        SFX.replicate();
+      }
+      return; // egg 중엔 이동/AI 없음
+    }
+
+    // ── 맵 벽 충돌 (크리퍼) ──
+    for (const w of stageWalls) {
+      if (this.x + DRAW_W > w.x && this.x < w.x + w.w &&
+          this.y + DRAW_H > w.y && this.y < w.y + w.h) {
+        const oL = (this.x + DRAW_W) - w.x;
+        const oR = (w.x + w.w) - this.x;
+        const oT = (this.y + DRAW_H) - w.y;
+        const oB = (w.y + w.h) - this.y;
+        const m  = Math.min(oL, oR, oT, oB);
+        if (m === oL) { this.x -= oL; this.vx = -Math.abs(this.vx); }
+        else if (m === oR) { this.x += oR; this.vx = Math.abs(this.vx); }
+        else if (m === oT) { this.y -= oT; this.vy = -Math.abs(this.vy); }
+        else { this.y += oB; this.vy = Math.abs(this.vy); }
+      }
+    }
 
     const pc   = player.center();
     const dx   = pc.x - (this.x + DRAW_W/2);
@@ -806,6 +1008,47 @@ class Creeper {
 
   draw() {
     if (!this.alive) return;
+
+    // ── Egg 렌더링 ──
+    if (this.isEgg) {
+      const rx = Math.round(this.x), ry = Math.round(this.y);
+      const cx = rx + DRAW_W / 2, cy = ry + DRAW_H / 2;
+      const pulse = 0.8 + Math.sin(Date.now() / 200) * 0.08;
+      const ew = DRAW_W * 0.6 * pulse, eh = DRAW_H * 0.75 * pulse;
+      // 부화 진행률 (0→1)
+      const prog = 1 - this.eggTimer / 120;
+      ctx.save();
+      // 알 몸통
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, ew / 2, eh / 2, 0, 0, Math.PI * 2);
+      ctx.fillStyle = `rgb(${Math.round(200 + prog*55)},${Math.round(220 - prog*80)},${Math.round(180 - prog*100)})`;
+      ctx.fill();
+      // 균열 (부화 50% 이상)
+      if (prog > 0.5) {
+        ctx.strokeStyle = '#004400';
+        ctx.lineWidth   = 1;
+        ctx.beginPath();
+        ctx.moveTo(cx,       cy - eh/4);
+        ctx.lineTo(cx - ew/5, cy);
+        ctx.lineTo(cx,       cy + eh/4);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx,       cy - eh/4);
+        ctx.lineTo(cx + ew/5, cy);
+        ctx.lineTo(cx,       cy + eh/4);
+        ctx.stroke();
+      }
+      // 테두리
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, ew / 2, eh / 2, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = '#00ff41';
+      ctx.lineWidth   = 1;
+      ctx.globalAlpha = 0.6;
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+
     const colors = Object.assign({}, CREEPER_COLORS);
     if (this.scared)  colors[2] = '#5aff5a';
     if (this.luring)  colors[2] = '#ffff00'; // 유인 중 노란색
@@ -850,6 +1093,10 @@ const REAPER_QUOTES_KR = [
 // 리퍼 방해 블록 (플레이어 앞 장벽)
 const reaperBlocks = []; // { x, y, w, h, timer }
 
+// ── 스테이지 맵 벽 ──
+// { x, y, w, h } — 캔버스 비율로 startStage()에서 설정
+let stageWalls = [];
+
 class Reaper {
   constructor(x, y) {
     this.x = x; this.y = y;
@@ -858,16 +1105,30 @@ class Reaper {
     this.quote = ''; this.quoteTimer = 0;
     this.flip  = false;
 
+    // 아이템: 프리즈 상태
+    this.frozenTimer = 0;
+
     // 방해 전술 쿨다운
-    this.blockCooldown = 180;  // 장벽 생성 쿨다운
-    this.pushCooldown  = 0;    // 크리퍼 밀기 쿨다운
-    this.blindCooldown = 300;  // 시야 흑화 쿨다운
+    this.blockCooldown    = 180;  // 장벽 생성 쿨다운
+    this.pushCooldown     = 0;    // 크리퍼 밀기 쿨다운
+    this.blindCooldown    = 300;  // 시야 흑화 쿨다운
+    this.teleportCooldown = 400;  // [stage5+] 크리퍼 텔레포트
+    this.shakeCooldown    = 480;  // [stage6+] 화면 흔들기
+    this.dashCooldown     = 240;  // [stage7+] 리퍼 돌진
+    this.dashing          = false;
+    this.dashTimer        = 0;
   }
 
   showQuote(text, d) { this.quote = text; this.quoteTimer = d || 100; }
 
   update(creepers, playerRef) {
     if (!this.alive) return;
+
+    // ── 아이템: 프리즈 중엔 이동 불가 ──
+    if (this.frozenTimer > 0) {
+      this.frozenTimer--;
+      return;
+    }
 
     // 가장 가까운 크리퍼
     let nearestCreeper = null, ncd = Infinity;
@@ -940,13 +1201,55 @@ class Reaper {
       }
     }
 
+    // ── 방해 4: 크리퍼 텔레포트 (stage 5+) ──
+    if (stage >= 5 && this.teleportCooldown <= 0 && nearestCreeper && pc) {
+      // 가장 가까운 크리퍼를 플레이어 반대편 랜덤 위치로 순간이동
+      const W2 = canvas.width, H2 = canvas.height;
+      let tx, ty, attempts = 0;
+      do {
+        tx = Math.random() * (W2 - DRAW_W);
+        ty = Math.random() * (H2 - DRAW_H);
+        attempts++;
+      } while (Math.hypot(tx - pc.x, ty - pc.y) < DRAW_W * 5 && attempts < 20);
+      spawnParticles(nearestCreeper.x, nearestCreeper.y, '#00ffff', 14);
+      nearestCreeper.x = tx; nearestCreeper.y = ty;
+      nearestCreeper.vx = (Math.random()-0.5)*3; nearestCreeper.vy = (Math.random()-0.5)*3;
+      spawnParticles(tx, ty, '#00ffff', 14);
+      this.teleportCooldown = 480;
+      if (!this.quoteTimer) this.showQuote('이동시켰다!', 80);
+    }
+
+    // ── 방해 5: 화면 흔들기 (stage 6+) ──
+    if (stage >= 6 && this.shakeCooldown <= 0 && pd < DRAW_W * 8) {
+      screenShake = 18; // 글로벌 흔들기 변수
+      this.shakeCooldown = 600;
+      if (!this.quoteTimer) this.showQuote('혼란스럽지?', 90);
+    }
+
+    // ── 방해 6: 돌진 (stage 7+) ──
+    if (stage >= 7 && this.dashCooldown <= 0 && pc && pd < DRAW_W * 10) {
+      this.dashing   = true;
+      this.dashTimer = 40; // 40프레임간 돌진
+      this.dashCooldown = 420;
+      if (!this.quoteTimer) this.showQuote('돌진!', 60);
+    }
+    if (this.dashTimer > 0) {
+      this.dashTimer--;
+      if (this.dashTimer <= 0) this.dashing = false;
+    }
+
     // 쿨다운 감소
-    if (this.blockCooldown > 0) this.blockCooldown--;
-    if (this.pushCooldown  > 0) this.pushCooldown--;
-    if (this.blindCooldown > 0) this.blindCooldown--;
+    if (this.blockCooldown    > 0) this.blockCooldown--;
+    if (this.pushCooldown     > 0) this.pushCooldown--;
+    if (this.blindCooldown    > 0) this.blindCooldown--;
+    if (this.teleportCooldown > 0) this.teleportCooldown--;
+    if (this.shakeCooldown    > 0) this.shakeCooldown--;
+    if (this.dashCooldown     > 0) this.dashCooldown--;
 
     const elapsed  = Math.floor(gameTime / 1800);
-    const curSpeed = Math.min(REAPER_SPEED + elapsed * 0.12 + rcfg.reaperBoost, REAPER_SPEED * 5);
+    // 돌진 중엔 속도 3배
+    const dashMult = this.dashing ? 3.0 : 1.0;
+    const curSpeed = Math.min((REAPER_SPEED + elapsed * 0.12 + rcfg.reaperBoost) * dashMult, REAPER_SPEED * 7);
     const spd = Math.hypot(this.vx, this.vy);
     if (spd > curSpeed) { this.vx=(this.vx/spd)*curSpeed; this.vy=(this.vy/spd)*curSpeed; }
     this.flip = this.vx < 0;
@@ -964,9 +1267,97 @@ class Reaper {
   draw() {
     if (!this.alive) return;
     const rx = Math.round(this.x), ry = Math.round(this.y);
-    drawSprite(REAPER_SPRITE, REAPER_COLORS, rx, ry, 1, this.flip);
+    const alpha = this.frozenTimer > 0 ? 0.5 : 1;
+    drawSprite(REAPER_SPRITE, REAPER_COLORS, rx, ry, alpha, this.flip);
+    if (this.frozenTimer > 0) {
+      // 프리즈 오버레이
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle   = '#00ccff';
+      ctx.fillRect(rx, ry, DRAW_W, DRAW_H);
+      ctx.globalAlpha = 1;
+      ctx.font        = `bold ${PX * 4}px 'Courier New', monospace`;
+      ctx.fillStyle   = '#ffffff';
+      ctx.textAlign   = 'center';
+      ctx.fillText('❄', rx + DRAW_W / 2, ry - 4);
+      ctx.restore();
+    }
     if (this.quoteTimer > 0)
       drawBubble(rx + DRAW_W/2, ry, this.quote, '#cc00ff', false);
+  }
+}
+
+// ── 스테이지 맵 벽 그리기 ──
+function drawStageWalls() {
+  for (const w of stageWalls) {
+    ctx.save();
+    const isHoriz = w.w > w.h; // 수평 발판 여부
+
+    if (isHoriz) {
+      // ── 수평 발판 (버블버블 스타일) ──
+      // 상단 밝은 선 (하이라이트)
+      ctx.fillStyle = '#44ff66';
+      ctx.fillRect(w.x, w.y, w.w, 2);
+      // 본체
+      ctx.fillStyle = '#1a4a1a';
+      ctx.fillRect(w.x, w.y + 2, w.w, w.h - 2);
+      // 픽셀 블록 무늬 (6px 단위 체커)
+      ctx.fillStyle = '#224422';
+      const bs = 6;
+      for (let bx = w.x; bx < w.x + w.w; bx += bs * 2)
+        ctx.fillRect(bx, w.y + 2, bs, w.h - 2);
+      // 하단 그림자
+      ctx.fillStyle = '#0a1a0a';
+      ctx.fillRect(w.x, w.y + w.h - 2, w.w, 2);
+      // 발판 끝부분 캡
+      ctx.fillStyle = '#44ff66';
+      ctx.fillRect(w.x, w.y, 2, w.h);
+      ctx.fillRect(w.x + w.w - 2, w.y, 2, w.h);
+    } else {
+      // ── 수직 기둥 ──
+      // 좌측 밝은 선
+      ctx.fillStyle = '#44ff66';
+      ctx.fillRect(w.x, w.y, 2, w.h);
+      // 본체
+      ctx.fillStyle = '#1a4a1a';
+      ctx.fillRect(w.x + 2, w.y, w.w - 2, w.h);
+      // 픽셀 체커
+      ctx.fillStyle = '#224422';
+      const bs2 = 6;
+      for (let by = w.y; by < w.y + w.h; by += bs2 * 2)
+        ctx.fillRect(w.x + 2, by, w.w - 2, bs2);
+      // 우측 그림자
+      ctx.fillStyle = '#0a1a0a';
+      ctx.fillRect(w.x + w.w - 2, w.y, 2, w.h);
+    }
+
+    // 발광 테두리 (CRT 효과)
+    ctx.strokeStyle = '#00ff41';
+    ctx.lineWidth   = 1;
+    ctx.globalAlpha = 0.35;
+    ctx.shadowColor = '#00ff41';
+    ctx.shadowBlur  = 4;
+    ctx.strokeRect(w.x + 0.5, w.y + 0.5, w.w - 1, w.h - 1);
+    ctx.restore();
+  }
+}
+
+// ── 스테이지 맵 벽 플레이어 충돌 ──
+function applyWallsToPlayer() {
+  for (const w of stageWalls) {
+    const px = player.x, py = player.y;
+    if (px + DRAW_W > w.x && px < w.x + w.w &&
+        py + DRAW_H > w.y && py < w.y + w.h) {
+      const oL = (px + DRAW_W) - w.x;
+      const oR = (w.x + w.w)   - px;
+      const oT = (py + DRAW_H) - w.y;
+      const oB = (w.y + w.h)   - py;
+      const m  = Math.min(oL, oR, oT, oB);
+      if (m === oL) { player.x -= oL; player.tx = player.x; }
+      else if (m === oR) { player.x += oR; player.tx = player.x; }
+      else if (m === oT) { player.y -= oT; player.ty = player.y; }
+      else               { player.y += oB; player.ty = player.y; }
+    }
   }
 }
 
@@ -1109,6 +1500,20 @@ let gameTime = 0, totalTime = 0;
 let running  = false, reaperSpawned = false;
 let invincible = false;
 let stage = 1, stageClearPending = false;
+let screenShake = 0; // 화면 흔들기 강도 (픽셀)
+
+// ── 하트 게이지 ──
+let playerHearts = 3;
+const MAX_HEARTS = 3;
+let hitCooldown = 0; // 연속 피격 방지 (60프레임 = 1초)
+
+// ── 아이템 시스템 ──
+const ITEM_TYPES = [
+  { id: 'speed',  label: '⚡ 스피드',  color: '#ffff00', desc: '이동속도 5초 증가' },
+  { id: 'freeze', label: '❄ 프리즈',   color: '#00ccff', desc: '리퍼 3초 정지' },
+  { id: 'heart',  label: '♥ 회복',     color: '#ff4444', desc: '하트 1개 회복' },
+];
+let itemBoxes = []; // { x, y, type, collected, animTimer, glowPhase }
 
 // ═══════════════════════════════════════════════
 //  입력 처리
@@ -1171,6 +1576,7 @@ function triggerGameOver(mode) {
   const alive   = creepers.filter(c => c.alive).length;
 
   document.getElementById('go-stage').textContent  = stage;
+  document.getElementById('go-hearts').textContent = '♥'.repeat(playerHearts) + '♡'.repeat(MAX_HEARTS - playerHearts);
   document.getElementById('go-caught').textContent = caughtCount;
   document.getElementById('go-erased').textContent = erasedCount;
   document.getElementById('go-alive').textContent  = alive;
@@ -1197,6 +1603,11 @@ function triggerGameOver(mode) {
     systemMsg('접속 종료. 리퍼가 승리했습니다.');
   }
   goEl.classList.add('show');
+
+  // 게임오버(패배)일 때만 퀴즈 이어하기 제공 (클리어 시 제외)
+  if (!isClear) {
+    setTimeout(() => showQuiz(), 800);
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -1220,11 +1631,133 @@ function stageConfig(s) {
     maxReapers     : Math.min(1 + Math.floor(t / 2), 4),
     reaperBoost    : t * 0.22,
     reaperAccel    : Math.min(0.15 + t * 0.02, 0.32),
-    invincibleTime : Math.max(480 - t * 45, 120),
+    invincibleTime : 300, // 무적 5초 고정
     spawnOnCatch   : s >= 5 ? 3 : 2,
     bg             : STAGE_BG[Math.min(t, STAGE_BG.length - 1)],
     clearBonus     : 500 + t * 200,
   };
+}
+
+// ── 스테이지별 맵 벽 생성 (버블버블 스타일) ──
+// 발판 두께: PH=10, 수직 벽: PH=10
+// 각 스테이지마다 완전히 다른 레이아웃
+function buildStageWalls(s) {
+  const W  = canvas.width,  H  = canvas.height;
+  const PH = 10; // 발판 두께 (픽셀)
+  const PW = Math.round(W * 0.30); // 기본 발판 너비 (화면의 30%)
+  const PM = Math.round(W * 0.22); // 중간 발판 너비 (22%)
+  const PL = Math.round(W * 0.40); // 긴 발판 너비 (40%)
+
+  switch (s) {
+    case 1:
+      // ── STAGE 1: 오픈 필드 — 장애물 없음 ──
+      return [];
+
+    case 2:
+      // ── STAGE 2: 중앙 섬 — 화면 정중앙에 발판 1개 ──
+      return [
+        { x: W/2 - PL/2, y: H * 0.50, w: PL, h: PH },
+      ];
+
+    case 3:
+      // ── STAGE 3: 이중층 — 좌우 교차 발판 (버블버블 기본형) ──
+      // 좌측 발판 (상단), 우측 발판 (하단), 통로가 가운데 있음
+      return [
+        { x: W * 0.05,  y: H * 0.33, w: PW, h: PH }, // 상단 좌
+        { x: W * 0.65,  y: H * 0.33, w: PW, h: PH }, // 상단 우
+        { x: W * 0.05,  y: H * 0.66, w: PW, h: PH }, // 하단 좌
+        { x: W * 0.65,  y: H * 0.66, w: PW, h: PH }, // 하단 우
+      ];
+
+    case 4:
+      // ── STAGE 4: 삼층 구조 — 버블버블 정석 3단 발판 ──
+      // 각 층마다 좌 또는 우에 통로(gap)가 있음
+      return [
+        // 1층: 좌측 발판 (우측에 통로)
+        { x: W * 0.05, y: H * 0.28, w: W * 0.55, h: PH },
+        // 2층: 우측 발판 (좌측에 통로)
+        { x: W * 0.40, y: H * 0.52, w: W * 0.55, h: PH },
+        // 3층: 좌측 발판 (우측에 통로)
+        { x: W * 0.05, y: H * 0.76, w: W * 0.55, h: PH },
+      ];
+
+    case 5:
+      // ── STAGE 5: 십자형 — 수평/수직 교차, 4개 방 ──
+      return [
+        // 수평 발판 (중간 약간 위)
+        { x: W * 0.05, y: H * 0.42, w: W * 0.38, h: PH },
+        { x: W * 0.57, y: H * 0.42, w: W * 0.38, h: PH },
+        // 수직 기둥 (중앙)
+        { x: W/2 - PH/2, y: H * 0.15, w: PH, h: H * 0.27 },
+        { x: W/2 - PH/2, y: H * 0.52, w: PH, h: H * 0.27 },
+        // 상단 보조 발판
+        { x: W * 0.15, y: H * 0.22, w: PM, h: PH },
+        { x: W * 0.63, y: H * 0.22, w: PM, h: PH },
+        // 하단 보조 발판
+        { x: W * 0.15, y: H * 0.72, w: PM, h: PH },
+        { x: W * 0.63, y: H * 0.72, w: PM, h: PH },
+      ];
+
+    case 6:
+      // ── STAGE 6: 계단형 — 우하→좌상 방향 계단 4단 ──
+      return [
+        { x: W * 0.55, y: H * 0.20, w: W * 0.38, h: PH }, // 우상
+        { x: W * 0.35, y: H * 0.38, w: W * 0.38, h: PH }, // 우중상
+        { x: W * 0.15, y: H * 0.56, w: W * 0.38, h: PH }, // 좌중하
+        { x: W * 0.05, y: H * 0.74, w: W * 0.38, h: PH }, // 좌하
+        // 역방향 보조 계단
+        { x: W * 0.60, y: H * 0.74, w: W * 0.32, h: PH },
+      ];
+
+    case 7:
+      // ── STAGE 7: 우물형 — 양쪽 돌출 발판 + 중앙 수직 통로 ──
+      // 버블버블의 '방' 구조: 좌우 발판이 안쪽을 향해 돌출
+      return [
+        // 좌측 돌출 발판 (상/중/하)
+        { x: 0,        y: H * 0.22, w: W * 0.35, h: PH },
+        { x: 0,        y: H * 0.48, w: W * 0.35, h: PH },
+        { x: 0,        y: H * 0.74, w: W * 0.35, h: PH },
+        // 우측 돌출 발판 (상/중/하) — 좌측과 엇갈리게
+        { x: W * 0.65, y: H * 0.35, w: W * 0.35, h: PH },
+        { x: W * 0.65, y: H * 0.61, w: W * 0.35, h: PH },
+        // 중앙 상단 소발판
+        { x: W * 0.38, y: H * 0.15, w: PM, h: PH },
+      ];
+
+    case 8:
+      // ── STAGE 8: 체커보드 — 격자형 소발판 배치 ──
+      // 3×3 격자로 총 9개 소발판, 각 발판 사이로 이동 가능
+      {
+        const walls8 = [];
+        const cols8 = [0.12, 0.42, 0.68];
+        const rows8 = [0.22, 0.47, 0.72];
+        const sw8   = Math.round(W * 0.22);
+        for (const rx of cols8)
+          for (const ry of rows8)
+            walls8.push({ x: W * rx, y: H * ry, w: sw8, h: PH });
+        return walls8;
+      }
+
+    default:
+      // ── STAGE 9+: 완전 미로 — 격실 4개 + 통로 ──
+      return [
+        // 수평 중앙 분리벽 (중앙에 통로 2개)
+        { x: 0,        y: H * 0.40, w: W * 0.30, h: PH },
+        { x: W * 0.40, y: H * 0.40, w: W * 0.22, h: PH },
+        { x: W * 0.72, y: H * 0.40, w: W * 0.28, h: PH },
+        // 수직 분리벽 (상하 각 한칸씩 통로)
+        { x: W * 0.50 - PH/2, y: H * 0.08, w: PH, h: H * 0.28 },
+        { x: W * 0.50 - PH/2, y: H * 0.50, w: PH, h: H * 0.28 },
+        // 좌상 방 내부 발판
+        { x: W * 0.08, y: H * 0.22, w: PM, h: PH },
+        // 우상 방 내부 발판
+        { x: W * 0.65, y: H * 0.22, w: PM, h: PH },
+        // 좌하 방 내부 발판
+        { x: W * 0.08, y: H * 0.66, w: PM, h: PH },
+        // 우하 방 내부 발판
+        { x: W * 0.65, y: H * 0.66, w: PM, h: PH },
+      ];
+  }
 }
 
 function triggerStageClear() {
@@ -1252,9 +1785,18 @@ function startStage() {
   const cfg = stageConfig(stage);
   creepers = []; reapers = [];
   reaperBlocks.length = 0;
+  itemBoxes = [];
+  stageWalls = buildStageWalls(stage);
+  screenShake = 0;
   gameTime = 0; reaperSpawned = false; invincible = false;
   stageClearPending = false;
   trails.length = 0; particles.length = 0;
+  hitCooldown = 0;
+
+  // 30% 확률로 아이템 박스 생성 (스테이지 시작 5초 후)
+  if (Math.random() < 0.30) {
+    setTimeout(() => { if (running) spawnItemBox(); }, 5000);
+  }
 
   document.getElementById('canvas').style.background = cfg.bg;
   player.x  = canvas.width * 0.15;
@@ -1262,6 +1804,7 @@ function startStage() {
   player.tx = player.x; player.ty = player.y;
   player.quote = ''; player.quoteTimer = 0;
   player.blindTimer = 0; player.blinded = false;
+  player.scale = 1.0; player.scaleTimer = 0;
 
   for (let i = 0; i < cfg.creeperCount; i++) {
     const ang = (i / cfg.creeperCount) * Math.PI * 2;
@@ -1298,11 +1841,14 @@ function startStage() {
     `최대 ${cfg.maxCreepers}마리`,
   ];
   systemMsg(wp.join('  '));
-  if (stage === 2) systemMsg('⚠ 리퍼가 당신을 직접 추격합니다!');
-  if (stage === 3) systemMsg('⚠ 크리퍼들이 더 멀리서 도망칩니다! 리퍼가 장벽을 설치합니다!');
-  if (stage === 4) systemMsg('⚠ 두 번째 리퍼 등장! 시야를 잃을 수 있습니다!');
-  if (stage === 5) systemMsg('⚠ 포획 시 자손 3마리 소환!');
-  if (stage >= 6)  systemMsg(`⚠ STAGE ${stage}: 극한 난이도. 행운을 빕니다.`);
+  if (stage === 2) systemMsg('⚠ [MAP: 중앙 섬] 리퍼가 당신을 직접 추격합니다!');
+  if (stage === 3) systemMsg('⚠ [MAP: 이중층] 좌우 교차 발판 등장! 리퍼가 장벽을 설치합니다!');
+  if (stage === 4) systemMsg('⚠ [MAP: 삼층구조] 3단 발판! 두 번째 리퍼 등장! 시야 차단 주의!');
+  if (stage === 5) systemMsg('⚠ [MAP: 십자형] 리퍼가 크리퍼를 텔레포트합니다! 자손은 알(Egg) 형태!');
+  if (stage === 6) systemMsg('⚠ [MAP: 계단형] 리퍼가 화면을 흔듭니다!');
+  if (stage === 7) systemMsg('⚠ [MAP: 우물형] 리퍼 돌진 시작!');
+  if (stage === 8) systemMsg('⚠ [MAP: 체커보드] 격자 발판! 극한 난이도 시작!');
+  if (stage >= 9)  systemMsg(`⚠ [MAP: 완전미로] STAGE ${stage}: 미로를 헤쳐나가라.`);
 
   updateUI();
   running = true;
@@ -1310,14 +1856,209 @@ function startStage() {
   requestAnimationFrame(loop);
 }
 
+// ═══════════════════════════════════════════════
+//  퀴즈 시스템 — 이어하기 챌린지
+// ═══════════════════════════════════════════════
+const QUIZ_DB = [
+  // ── 덧셈 ──
+  { q:'24 + 35 = ?', o:['57','58','59','60'], a:2 },
+  { q:'47 + 26 = ?', o:['71','72','73','74'], a:2 },
+  { q:'58 + 37 = ?', o:['93','94','95','96'], a:2 },
+  { q:'63 + 29 = ?', o:['90','91','92','93'], a:2 },
+  { q:'75 + 48 = ?', o:['121','122','123','124'], a:2 },
+  { q:'136 + 247 = ?', o:['381','382','383','384'], a:2 },
+  { q:'254 + 138 = ?', o:['390','391','392','393'], a:2 },
+  { q:'307 + 486 = ?', o:['791','792','793','794'], a:2 },
+  { q:'425 + 375 = ?', o:['798','799','800','801'], a:2 },
+  { q:'519 + 263 = ?', o:['780','781','782','783'], a:2 },
+  // ── 뺄셈 ──
+  { q:'73 - 28 = ?', o:['43','44','45','46'], a:2 },
+  { q:'92 - 47 = ?', o:['43','44','45','46'], a:2 },
+  { q:'85 - 36 = ?', o:['47','48','49','50'], a:2 },
+  { q:'61 - 24 = ?', o:['35','36','37','38'], a:2 },
+  { q:'100 - 57 = ?', o:['41','42','43','44'], a:2 },
+  { q:'432 - 167 = ?', o:['263','264','265','266'], a:2 },
+  { q:'500 - 238 = ?', o:['260','261','262','263'], a:2 },
+  { q:'714 - 356 = ?', o:['356','357','358','359'], a:2 },
+  { q:'600 - 174 = ?', o:['424','425','426','427'], a:2 },
+  { q:'803 - 465 = ?', o:['336','337','338','339'], a:2 },
+  // ── 곱셈 (구구단) ──
+  { q:'3 × 4 = ?', o:['10','11','12','13'], a:2 },
+  { q:'4 × 7 = ?', o:['26','27','28','29'], a:2 },
+  { q:'5 × 6 = ?', o:['28','29','30','31'], a:2 },
+  { q:'6 × 8 = ?', o:['46','47','48','49'], a:2 },
+  { q:'7 × 7 = ?', o:['47','48','49','50'], a:2 },
+  { q:'8 × 6 = ?', o:['46','47','48','49'], a:2 },
+  { q:'9 × 7 = ?', o:['61','62','63','64'], a:2 },
+  { q:'3 × 9 = ?', o:['25','26','27','28'], a:2 },
+  { q:'6 × 9 = ?', o:['52','53','54','55'], a:2 },
+  { q:'7 × 6 = ?', o:['40','41','42','43'], a:2 },
+  // ── 나눗셈 ──
+  { q:'12 ÷ 3 = ?', o:['3','4','5','6'], a:1 },
+  { q:'20 ÷ 4 = ?', o:['4','5','6','7'], a:1 },
+  { q:'36 ÷ 6 = ?', o:['5','6','7','8'], a:1 },
+  { q:'45 ÷ 9 = ?', o:['4','5','6','7'], a:1 },
+  { q:'56 ÷ 8 = ?', o:['6','7','8','9'], a:1 },
+  { q:'72 ÷ 9 = ?', o:['7','8','9','10'], a:1 },
+  { q:'42 ÷ 7 = ?', o:['5','6','7','8'], a:1 },
+  { q:'32 ÷ 4 = ?', o:['7','8','9','10'], a:1 },
+  { q:'54 ÷ 6 = ?', o:['8','9','10','11'], a:1 },
+  { q:'81 ÷ 9 = ?', o:['8','9','10','11'], a:1 },
+  // ── 세 자리 수 덧셈 / 뺄셈 ──
+  { q:'348 + 215 = ?', o:['561','562','563','564'], a:2 },
+  { q:'467 + 325 = ?', o:['790','791','792','793'], a:2 },
+  { q:'523 + 459 = ?', o:['980','981','982','983'], a:2 },
+  { q:'612 + 289 = ?', o:['899','900','901','902'], a:1 },
+  { q:'745 + 136 = ?', o:['879','880','881','882'], a:2 },
+  { q:'956 - 428 = ?', o:['526','527','528','529'], a:2 },
+  { q:'874 - 356 = ?', o:['516','517','518','519'], a:2 },
+  { q:'700 - 263 = ?', o:['435','436','437','438'], a:2 },
+  { q:'631 - 248 = ?', o:['381','382','383','384'], a:2 },
+  { q:'500 - 317 = ?', o:['181','182','183','184'], a:2 },
+  // ── 곱셈 응용 ──
+  { q:'사탕이 한 봉지에 6개, 4봉지면 몇 개?', o:['22','23','24','25'], a:2 },
+  { q:'의자가 한 줄에 8개, 7줄이면 몇 개?', o:['54','55','56','57'], a:2 },
+  { q:'한 상자에 9개, 6상자면 몇 개?', o:['52','53','54','55'], a:2 },
+  { q:'한 묶음에 5개, 8묶음이면 몇 개?', o:['38','39','40','41'], a:2 },
+  { q:'하루에 7쪽씩 읽으면 3일에 몇 쪽?', o:['19','20','21','22'], a:2 },
+  // ── 나눗셈 응용 ──
+  { q:'사과 24개를 6명에게 똑같이 나누면 한 명당 몇 개?', o:['3','4','5','6'], a:1 },
+  { q:'연필 35자루를 7명에게 나누면 한 명당 몇 자루?', o:['4','5','6','7'], a:1 },
+  { q:'초콜릿 48개를 8봉지에 똑같이 담으면 한 봉지에 몇 개?', o:['5','6','7','8'], a:1 },
+  { q:'구슬 63개를 9개씩 담으면 몇 봉지?', o:['6','7','8','9'], a:1 },
+  { q:'카드 72장을 8명이 나누면 한 명당 몇 장?', o:['8','9','10','11'], a:1 },
+  // ── 길이 / 무게 / 시간 단위 ──
+  { q:'2m 30cm = 몇 cm?', o:['203','230','2030','23'], a:1 },
+  { q:'3km 500m = 몇 m?', o:['3050','3500','350','35000'], a:1 },
+  { q:'4kg 200g = 몇 g?', o:['4020','4200','420','42000'], a:1 },
+  { q:'1시간 20분 = 몇 분?', o:['70','75','80','90'], a:2 },
+  { q:'2시간 45분 = 몇 분?', o:['155','160','165','170'], a:2 },
+  { q:'150cm = 몇 m 몇 cm?', o:['1m 5cm','1m 50cm','15m','15m 0cm'], a:1 },
+  { q:'2500g = 몇 kg 몇 g?', o:['2kg 50g','2kg 500g','25kg','250g'], a:1 },
+  { q:'95분 = 몇 시간 몇 분?', o:['1시간 25분','1시간 35분','1시간 45분','2시간 5분'], a:1 },
+  // ── 도형 ──
+  { q:'삼각형 3개를 이어 붙이면 꼭짓점은 모두 몇 개?', o:['7','8','9','10'], a:2 },
+  { q:'사각형 1개의 꼭짓점과 변의 수의 합은?', o:['6','7','8','9'], a:2 },
+  { q:'원을 반으로 자르면 생기는 도형 이름은?', o:['삼각형','사각형','반원','육각형'], a:2 },
+  { q:'정사각형에서 한 변의 길이가 5cm면 둘레는?', o:['15cm','20cm','25cm','30cm'], a:1 },
+  { q:'직사각형에서 가로 8cm, 세로 4cm이면 둘레는?', o:['20cm','22cm','24cm','26cm'], a:2 },
+  // ── 수의 크기 비교 / 수 감각 ──
+  { q:'다음 중 가장 큰 수는?', o:['389','392','387','395'], a:3 },
+  { q:'다음 중 가장 작은 수는?', o:['502','498','510','487'], a:3 },
+  { q:'473보다 100 큰 수는?', o:['373','474','573','574'], a:2 },
+  { q:'618보다 10 작은 수는?', o:['608','609','618','628'], a:0 },
+  { q:'750과 850의 가운데 수는?', o:['790','800','810','820'], a:1 },
+  { q:'□ + 37 = 85, □는?', o:['47','48','49','50'], a:1 },
+  { q:'92 - □ = 54, □는?', o:['36','37','38','39'], a:2 },
+  { q:'□ × 6 = 48, □는?', o:['7','8','9','10'], a:1 },
+  { q:'56 ÷ □ = 7, □는?', o:['6','7','8','9'], a:2 },
+  { q:'□ ÷ 9 = 8, □는?', o:['63','70','72','81'], a:2 },
+  // ── 혼합 계산 ──
+  { q:'3 × 8 + 6 = ?', o:['28','30','32','34'], a:1 },
+  { q:'5 × 7 - 9 = ?', o:['25','26','27','28'], a:1 },
+  { q:'48 ÷ 6 + 15 = ?', o:['22','23','24','25'], a:1 },
+  { q:'(7 + 5) × 4 = ?', o:['44','46','48','50'], a:2 },
+  { q:'(9 - 3) × 8 = ?', o:['46','47','48','49'], a:2 },
+  { q:'72 ÷ 8 - 3 = ?', o:['5','6','7','8'], a:1 },
+  { q:'4 × (6 + 2) = ?', o:['30','31','32','33'], a:2 },
+  { q:'(50 - 14) ÷ 6 = ?', o:['5','6','7','8'], a:1 },
+  { q:'9 × 9 - 18 = ?', o:['61','62','63','64'], a:2 },
+  { q:'100 - 6 × 7 = ?', o:['56','57','58','59'], a:2 },
+  // ── 분수 기초 ──
+  { q:'1/2과 같은 분수는?', o:['2/6','2/4','3/8','4/6'], a:1 },
+  { q:'1/3은 전체를 몇으로 나눈 것 중 1?', o:['2','3','4','5'], a:1 },
+  { q:'3/4은 1보다 크나요, 작나요?', o:['크다','작다','같다','알 수 없다'], a:1 },
+  { q:'피자 8조각 중 3조각을 먹었다면 먹은 것은 전체의?', o:['3/5','3/6','3/8','3/9'], a:2 },
+  { q:'같은 크기의 ○을 4개 그렸을 때 그 중 1개는?', o:['1/3','1/4','1/5','2/4'], a:1 },
+];
+
+let quizActive = false;
+let quizCorrect = false;
+
+function showQuiz() {
+  const idx = Math.floor(Math.random() * QUIZ_DB.length);
+  const q = QUIZ_DB[idx];
+
+  document.getElementById('quiz-question').textContent = q.q;
+  const optsEl = document.getElementById('quiz-options');
+  optsEl.innerHTML = '';
+  document.getElementById('quiz-result').textContent = '';
+  document.getElementById('quiz-result').className = '';
+  document.getElementById('quiz-continue').style.display = 'none';
+  quizCorrect = false;
+
+  q.o.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'quiz-btn';
+    btn.textContent = ['①','②','③','④'][i] + '  ' + opt;
+    btn.addEventListener('click', () => {
+      if (quizCorrect) return;
+      const allBtns = optsEl.querySelectorAll('.quiz-btn');
+      allBtns.forEach(b => b.style.pointerEvents = 'none');
+      if (i === q.a) {
+        btn.classList.add('correct');
+        quizCorrect = true;
+        document.getElementById('quiz-result').textContent = '정답! 이어하기 버튼을 누르세요.';
+        document.getElementById('quiz-result').className = 'ok';
+        document.getElementById('quiz-continue').style.display = 'block';
+      } else {
+        btn.classList.add('wrong');
+        allBtns[q.a].classList.add('correct');
+        document.getElementById('quiz-result').textContent = '틀렸습니다. 새 문제로 다시 도전하려면 아래를 누르세요.';
+        document.getElementById('quiz-result').className = 'err';
+        setTimeout(() => showQuiz(), 2200);
+      }
+    });
+    optsEl.appendChild(btn);
+  });
+
+  document.getElementById('quiz-overlay').classList.add('show');
+  quizActive = true;
+}
+
+function closeQuiz() {
+  document.getElementById('quiz-overlay').classList.remove('show');
+  quizActive = false;
+}
+
+document.getElementById('quiz-continue').addEventListener('click', () => {
+  if (!quizCorrect) return;
+  closeQuiz();
+  // 이어하기: 게임오버 오버레이 닫고 같은 스테이지에서 재개
+  document.getElementById('gameover').classList.remove('show', 'clear');
+  playerHearts = MAX_HEARTS;
+  hitCooldown = 0;
+  invincible = false;
+  player.x  = canvas.width * 0.2;
+  player.y  = canvas.height / 2 - DRAW_H / 2;
+  player.tx = player.x; player.ty = player.y;
+  player.blindTimer = 0; player.blinded = false;
+  trails.length = 0; particles.length = 0;
+  reaperBlocks.length = 0;
+  stageClearPending = false;
+  updateHeartsUI();
+  systemMsg('--- 재접속 성공! 이어하기 시작 ---');
+  setTimeout(() => creeperMsg('다시 왔군. 이번엔 못 잡아!'), 600);
+  startStage();
+});
+
+document.getElementById('quiz-give-up').addEventListener('click', () => {
+  closeQuiz();
+  restartGame();
+});
+
 function restartGame() {
   document.getElementById('gameover').classList.remove('show', 'clear');
   creepers = []; reapers = [];
   reaperBlocks.length = 0;
+  stageWalls = []; screenShake = 0;
   caughtCount = 0; erasedCount = 0;
   gameTime = 0; totalTime = 0; stage = 1;
   reaperSpawned = false; invincible = false;
   stageClearPending = false;
+  playerHearts = MAX_HEARTS;
+  itemBoxes = [];
+  hitCooldown = 0;
   player.x  = canvas.width * 0.2;
   player.y  = canvas.height / 2 - DRAW_H / 2;
   player.tx = player.x; player.ty = player.y;
@@ -1332,14 +2073,127 @@ function restartGame() {
 document.getElementById('btn-restart').addEventListener('click', () => { resumeAudio(); restartGame(); });
 
 // ═══════════════════════════════════════════════
+//  아이템 박스 시스템
+// ═══════════════════════════════════════════════
+function spawnItemBox() {
+  const margin = DRAW_W * 2;
+  const x = margin + Math.random() * (canvas.width  - margin * 2);
+  const y = margin + Math.random() * (canvas.height - margin * 2);
+  const type = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
+  itemBoxes.push({ x, y, type, collected: false, glowPhase: Math.random() * Math.PI * 2 });
+  systemMsg(`아이템 박스 출현! [${type.label}] — ${type.desc}`);
+}
+
+function updateItemBoxes() {
+  const pc = player.center();
+  for (let i = itemBoxes.length - 1; i >= 0; i--) {
+    const item = itemBoxes[i];
+    if (item.collected) { itemBoxes.splice(i, 1); continue; }
+    item.glowPhase += 0.08;
+    // 플레이어가 닿으면 획득
+    const dx = pc.x - (item.x + DRAW_W / 2);
+    const dy = pc.y - (item.y + DRAW_H / 2);
+    if (Math.hypot(dx, dy) < DRAW_W * 1.1) {
+      collectItem(item);
+      item.collected = true;
+    }
+  }
+}
+
+function collectItem(item) {
+  spawnParticles(item.x + DRAW_W/2, item.y + DRAW_H/2, item.type.color, 22);
+  beep(500, 'square', 0.15, 0.05);
+  beep(700, 'square', 0.12, 0.08, 0.06);
+  beep(900, 'square', 0.10, 0.10, 0.14);
+  systemMsg(`아이템 획득! ${item.type.label} — ${item.type.desc}`);
+
+  if (item.type.id === 'speed') {
+    player.speedBoost      = true;
+    player.speedBoostTimer = 300; // 5초
+    player.showQuote('스피드 업!', 120);
+    systemMsg('플레이어 이동속도 증가 (5초)');
+  } else if (item.type.id === 'freeze') {
+    for (const r of reapers) {
+      if (r.alive) r.frozenTimer = 180; // 3초
+    }
+    player.showQuote('리퍼 프리즈!', 120);
+    systemMsg('리퍼가 3초간 정지합니다!');
+  } else if (item.type.id === 'heart') {
+    if (playerHearts < MAX_HEARTS) {
+      playerHearts++;
+      updateHeartsUI();
+      player.showQuote('하트 회복!', 120);
+      systemMsg(`하트 회복! 현재 ${playerHearts}/${MAX_HEARTS}`);
+    } else {
+      // 이미 풀하트면 보너스 점수 대신 메시지
+      caughtCount += 2; // 포획 보너스 2로 대체
+      player.showQuote('풀 하트! +600pt', 120);
+      systemMsg('풀 하트 상태 — 포획 보너스 +2 지급');
+      updateUI();
+    }
+  }
+}
+
+function drawItemBoxes() {
+  for (const item of itemBoxes) {
+    if (item.collected) continue;
+    const x  = Math.round(item.x);
+    const y  = Math.round(item.y);
+    const cx = x + DRAW_W / 2;
+    const cy = y + DRAW_H / 2;
+    const glow = 0.6 + Math.sin(item.glowPhase) * 0.4;
+
+    ctx.save();
+    // 외부 발광
+    ctx.shadowColor = item.type.color;
+    ctx.shadowBlur  = 10 * glow;
+    // 박스 본체
+    ctx.fillStyle   = '#0a0a0a';
+    ctx.strokeStyle = item.type.color;
+    ctx.lineWidth   = 2;
+    ctx.globalAlpha = 0.85 + glow * 0.15;
+    const bx = x + 2, by = y + 2, bw = DRAW_W - 4, bh = DRAW_H - 4;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeRect(bx, by, bw, bh);
+    // 십자 장식
+    ctx.strokeStyle = item.type.color;
+    ctx.lineWidth   = 1;
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(cx, by); ctx.lineTo(cx, by + bh);
+    ctx.moveTo(bx, cy); ctx.lineTo(bx + bw, cy);
+    ctx.stroke();
+    // 아이콘 문자
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur  = 0;
+    ctx.font        = `bold ${PX * 4}px 'Courier New', monospace`;
+    ctx.fillStyle   = item.type.color;
+    ctx.textAlign   = 'center';
+    ctx.textBaseline = 'middle';
+    const icons = { speed: '⚡', freeze: '❄', heart: '♥' };
+    ctx.fillText(icons[item.type.id], cx, cy);
+    ctx.textBaseline = 'alphabetic';
+    ctx.restore();
+  }
+}
+
+// ═══════════════════════════════════════════════
 //  UI
 // ═══════════════════════════════════════════════
+function updateHeartsUI() {
+  const el = document.getElementById('sc-hearts');
+  const filled  = '♥'.repeat(playerHearts);
+  const empty   = '♡'.repeat(MAX_HEARTS - playerHearts);
+  el.textContent = filled + empty;
+}
+
 function updateUI() {
   document.getElementById('sc-stage').textContent  = stage;
   document.getElementById('sc-caught').textContent = caughtCount;
   document.getElementById('sc-alive').textContent  = creepers.filter(c=>c.alive).length;
   document.getElementById('sc-erased').textContent = erasedCount;
   document.getElementById('sc-time').textContent   = Math.floor(totalTime/60) + 's';
+  updateHeartsUI();
 }
 
 // ═══════════════════════════════════════════════
@@ -1525,6 +2379,9 @@ function spawnCreeper(x, y, small) {
     c.speed *= 1.3;
     c.replicateTimer = 9999;
     c.isSmall = true;
+    // ── 자손은 egg 형태로 시작 (2초 부화 대기) ──
+    c.isEgg    = true;
+    c.eggTimer = 120; // 2초 (60fps 기준)
   }
   creepers.push(c);
   return creepers[creepers.length - 1];
@@ -1555,9 +2412,18 @@ function loop() {
 
   const cfg = stageConfig(stage);
 
+  // ── 화면 흔들기 ──
+  ctx.save();
+  if (screenShake > 0) {
+    const sx = (Math.random() - 0.5) * screenShake;
+    const sy = (Math.random() - 0.5) * screenShake;
+    ctx.translate(sx, sy);
+    screenShake = Math.max(0, screenShake - 1.2);
+  }
+
   // 배경 (블라인드 여부 무관하게 일단 정상 배경)
   ctx.fillStyle = cfg.bg;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(-20, -20, canvas.width + 40, canvas.height + 40);
 
   // 도트 그리드
   ctx.fillStyle = '#181818';
@@ -1585,6 +2451,7 @@ function loop() {
 
   // 장벽 적용
   applyBlocksToPlayer();
+  applyWallsToPlayer();
 
   // 포획 (무적 중 불가)
   const pc = player.center();
@@ -1593,6 +2460,24 @@ function loop() {
     if (invincible) continue;
     if (c.hitTest(pc.x, pc.y)) {
       c.alive = false;
+
+      // ── Egg 파괴: 30% 확률로 플레이어 크기 증가 ──
+      if (c.isEgg) {
+        spawnParticles(c.x + DRAW_W/2, c.y + DRAW_H/2, '#ffff00', 20);
+        beep(600,'square',0.15,0.08); beep(800,'square',0.12,0.06,0.08);
+        if (Math.random() < 0.30) {
+          player.scale      = 2.0;
+          player.scaleTimer = 600; // 10초
+          player.showQuote('커졌다!', 90);
+          systemMsg('알 파괴! 플레이어 크기 증가 (10초)');
+          spawnParticles(player.x + DRAW_W/2, player.y + DRAW_H/2, '#ffaa00', 18);
+        } else {
+          systemMsg('알 파괴!');
+        }
+        updateUI();
+        continue;
+      }
+
       caughtCount++;
       SFX.catch();
       spawnParticles(c.x, c.y, '#00ff41', 24);
@@ -1642,28 +2527,52 @@ function loop() {
     }
   }
 
+  if (hitCooldown > 0) hitCooldown--;
+
   for (const r of reapers) {
     r.update(creepers, player);
     if (!r.alive) continue;
     const rdx = r.x + DRAW_W/2 - pc.x;
     const rdy = r.y + DRAW_H/2 - pc.y;
     if (Math.hypot(rdx, rdy) < DRAW_W * 0.85) {
-      if (!invincible) {
-        SFX.playerHit();
-        spawnParticles(player.x, player.y, '#ff2200', 40);
-        triggerGameOver();
-        return;
-      } else {
+      if (invincible) {
         const ang = Math.atan2(rdy, rdx);
         r.vx += Math.cos(ang) * 3;
         r.vy += Math.sin(ang) * 3;
+      } else if (hitCooldown <= 0) {
+        SFX.playerHit();
+        spawnParticles(player.x, player.y, '#ff2200', 40);
+        screenShake = 12;
+        playerHearts--;
+        hitCooldown = 120; // 2초 무적
+        updateHeartsUI();
+        // 하트 흔들기 애니메이션
+        const heartsEl = document.getElementById('sc-hearts');
+        heartsEl.classList.remove('hit');
+        void heartsEl.offsetWidth; // reflow
+        heartsEl.classList.add('hit');
+        if (playerHearts <= 0) {
+          triggerGameOver();
+          return;
+        } else {
+          systemMsg(`리퍼에게 공격받음! 하트 ${playerHearts}/${MAX_HEARTS} 남음`);
+          creeperMsg(['조심해!', '리퍼야, 피해!', '빨리 도망쳐!', '위험해!'][Math.floor(Math.random()*4)]);
+        }
+        // 리퍼를 뒤로 밀어냄
+        const ang = Math.atan2(rdy, rdx);
+        r.vx += Math.cos(ang) * 5;
+        r.vy += Math.sin(ang) * 5;
       }
     }
   }
 
+  updateItemBoxes();
+
   updateTrails();
   drawTrails();
+  drawStageWalls();
   drawReaperBlocks();
+  drawItemBoxes();
   player.draw();
   for (const c of creepers) c.draw();
   for (const r of reapers)  r.draw();
@@ -1691,39 +2600,65 @@ function loop() {
     ctx.fillStyle = '#ff4400';
     ctx.shadowColor = '#ff4400';
     ctx.shadowBlur  = 8;
-    ctx.fillText(`👁 시야 차단 ${remain}초`, canvas.width / 2, player.blinded && invincible ? 58 : 40);
+    ctx.fillText(`시야 차단 ${remain}초`, canvas.width / 2, player.blinded && invincible ? 58 : 40);
+  }
+  if (player.speedBoost) {
+    const remain = Math.ceil(player.speedBoostTimer / 60);
+    ctx.font      = `bold 13px 'Courier New', monospace`;
+    ctx.fillStyle = '#ffff00';
+    ctx.shadowColor = '#ffff00';
+    ctx.shadowBlur  = 8;
+    let hudY = 40;
+    if (invincible) hudY = 58;
+    if (player.blinded) hudY = (invincible ? 76 : 58);
+    ctx.fillText(`SPEED UP ${remain}s`, canvas.width / 2, hudY);
+  }
+  // hitCooldown 중 무적 표시
+  if (hitCooldown > 0 && !invincible) {
+    const remain = Math.ceil(hitCooldown / 60);
+    ctx.font      = `bold 11px 'Courier New', monospace`;
+    ctx.fillStyle = '#ff8800';
+    ctx.shadowColor = '#ff8800';
+    ctx.shadowBlur  = 6;
+    ctx.fillText(`피격 후 무적 ${remain}s`, canvas.width / 2, canvas.height - 8);
   }
   ctx.restore();
 
   updateParticles();
   drawParticles();
 
-  // ── 시야 흑화 오버레이: 모든 오브젝트 위에 덮음 ──
+  // ── 시야 흑화 오버레이: 오프스크린 캔버스로 정확하게 합성 ──
   if (player.blinded) {
     const bpc = player.center();
     const W = canvas.width, H = canvas.height;
-    ctx.save();
-    // compositing trick: 검은 사각형 → 원형 구멍 뚫기
-    ctx.globalCompositeOperation = 'source-over';
-    // 먼저 전체를 검게 덮는다
-    ctx.fillStyle = 'rgba(0,0,0,0.97)';
-    ctx.fillRect(0, 0, W, H);
-    // 그 위에 플레이어 주변을 radial gradient로 '지운다' (destination-out)
-    ctx.globalCompositeOperation = 'destination-out';
+    // 오프스크린 캔버스 크기 맞추기
+    blindCanvas.width  = W;
+    blindCanvas.height = H;
+    // 오프스크린을 완전히 검게 채우기
+    blindCtx.globalCompositeOperation = 'source-over';
+    blindCtx.fillStyle = 'rgba(0,0,0,0.97)';
+    blindCtx.fillRect(0, 0, W, H);
+    // 플레이어 중심 주변을 destination-out으로 뚫기
+    blindCtx.globalCompositeOperation = 'destination-out';
     const visR = DRAW_W * 3.5;
-    const grad = ctx.createRadialGradient(bpc.x, bpc.y, 0, bpc.x, bpc.y, visR);
-    grad.addColorStop(0, 'rgba(0,0,0,1)');
-    grad.addColorStop(0.6, 'rgba(0,0,0,0.9)');
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-    ctx.restore();
+    const grad = blindCtx.createRadialGradient(bpc.x, bpc.y, 0, bpc.x, bpc.y, visR);
+    grad.addColorStop(0,   'rgba(0,0,0,1)');   // 중심: 완전히 뚫림 (선명하게 보임)
+    grad.addColorStop(0.65,'rgba(0,0,0,0.85)');// 페이드 시작
+    grad.addColorStop(1,   'rgba(0,0,0,0)');   // 끝: 막힘 (완전 블랙)
+    blindCtx.fillStyle = grad;
+    blindCtx.fillRect(0, 0, W, H);
+    // 오프스크린을 메인 캔버스 위에 합성 (source-over로 리셋 후)
+    blindCtx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(blindCanvas, 0, 0);
   }
 
   ctx.save();
   ctx.globalAlpha = 0.03;
   ctx.fillStyle   = '#00ff41';
   ctx.fillRect(0, (gameTime * 2) % (canvas.height + 4) - 2, canvas.width, 2);
+  ctx.restore();
+
+  // screenShake translate 해제
   ctx.restore();
 
   requestAnimationFrame(loop);
@@ -1735,6 +2670,10 @@ function loop() {
 document.getElementById('btn-start').addEventListener('click', () => {
   document.getElementById('overlay').classList.remove('show');
   stage = 1;
+  playerHearts = MAX_HEARTS;
+  hitCooldown  = 0;
+  itemBoxes    = [];
+  updateHeartsUI();
   getAudio(); resumeAudio();
 
   systemMsg('네트워크 연결됨. ARPANET, 1971.');
