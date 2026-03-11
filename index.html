@@ -284,6 +284,71 @@
     #gameover.clear button:hover  { background: #003300; }
     #gameover.clear button:active { background: #004400; }
 
+    /* ── 인트로 서사 오버레이 ── */
+    #intro-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #000;
+      z-index: 90;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 0;
+      padding: 32px 24px;
+    }
+    #intro-overlay.show { display: flex; }
+
+    @keyframes introFadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes introCursor {
+      0%,100% { opacity: 1; } 50% { opacity: 0; }
+    }
+
+    .intro-line {
+      opacity: 0;
+      color: #00ff41;
+      font-family: 'Courier New', Courier, monospace;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .intro-line.visible {
+      animation: introFadeIn 0.7s ease forwards;
+    }
+    .intro-line.sm   { font-size: clamp(13px, 3vw, 16px); color: #00cc33; margin-bottom: 10px; }
+    .intro-line.lg   { font-size: clamp(22px, 6vw, 34px); font-weight: bold;
+                       color: #00ff41; text-shadow: 0 0 18px #00ff41; letter-spacing: 2px; margin-bottom: 18px; }
+    .intro-line.quote {
+      font-size: clamp(18px, 5vw, 28px); font-weight: bold;
+      color: #ffffff; text-shadow: 0 0 12px #ffffff; letter-spacing: 1px; margin-bottom: 22px;
+    }
+    .intro-line.body  { font-size: clamp(14px, 3.5vw, 18px); color: #88ff88; margin-bottom: 6px; }
+    .intro-line.em    { font-size: clamp(13px, 3vw, 16px); color: #44aaff; margin-bottom: 0; }
+
+    #intro-btn-wrap {
+      margin-top: 36px;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+    }
+    #intro-btn-wrap.visible { opacity: 1; }
+    #intro-start-btn {
+      background: #001a00;
+      border: 1px solid #00ff41;
+      color: #00ff41;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: clamp(14px, 3.5vw, 18px);
+      padding: 16px 44px;
+      cursor: pointer;
+      letter-spacing: 3px;
+      min-height: 52px;
+      touch-action: manipulation;
+      animation: introCursor 1.2s infinite;
+    }
+    #intro-start-btn:hover  { background: #003300; animation: none; }
+    #intro-start-btn:active { background: #004400; }
+
     /* ── 퀴즈 오버레이 ── */
     #quiz-overlay {
       display: none;
@@ -456,6 +521,17 @@
   </div>
   <div class="go-rank" id="go-rank"></div>
   <button id="btn-restart">[ 처음부터 시작 ]</button>
+</div>
+
+<div id="intro-overlay">
+  <div class="intro-line sm"  id="il-0">네트워크에 침입한 최초의 바이러스,</div>
+  <div class="intro-line lg"  id="il-1">Creeper.</div>
+  <div class="intro-line quote" id="il-2">"잡을 수 있다면 잡아봐."</div>
+  <div class="intro-line body" id="il-3">도망치는 바이러스를 추적하고</div>
+  <div class="intro-line body" id="il-4">시스템을 구하라.</div>
+  <div id="intro-btn-wrap">
+    <button id="intro-start-btn">[ 시작 ]</button>
+  </div>
 </div>
 
 <div id="quiz-overlay">
@@ -2667,8 +2743,36 @@ function loop() {
 // ═══════════════════════════════════════════════
 //  Start
 // ═══════════════════════════════════════════════
-document.getElementById('btn-start').addEventListener('click', () => {
+// ── 인트로 서사 애니메이션 ──
+function showIntro() {
   document.getElementById('overlay').classList.remove('show');
+  const introEl = document.getElementById('intro-overlay');
+  introEl.classList.add('show');
+
+  // 각 줄을 순서대로 등장시키는 타이밍 (ms)
+  const lineDelays = [0, 700, 1600, 2800, 3400];
+  for (let i = 0; i < lineDelays.length; i++) {
+    setTimeout(() => {
+      const el = document.getElementById('il-' + i);
+      if (el) el.classList.add('visible');
+    }, lineDelays[i]);
+  }
+
+  // 버튼은 마지막 줄 이후 등장
+  setTimeout(() => {
+    document.getElementById('intro-btn-wrap').classList.add('visible');
+  }, 4200);
+}
+
+function startGameFromIntro() {
+  document.getElementById('intro-overlay').classList.remove('show');
+  // 인트로 줄들 초기화 (재시작 대비)
+  for (let i = 0; i < 5; i++) {
+    const el = document.getElementById('il-' + i);
+    if (el) el.classList.remove('visible');
+  }
+  document.getElementById('intro-btn-wrap').classList.remove('visible');
+
   stage = 1;
   playerHearts = MAX_HEARTS;
   hitCooldown  = 0;
@@ -2685,7 +2789,10 @@ document.getElementById('btn-start').addEventListener('click', () => {
   setTimeout(() => { player.showQuote('반드시 잡겠어!', 150); }, 2800);
 
   startStage();
-});
+}
+
+document.getElementById('btn-start').addEventListener('click', showIntro);
+document.getElementById('intro-start-btn').addEventListener('click', startGameFromIntro);
 </script>
 </body>
 </html>
