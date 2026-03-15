@@ -284,6 +284,17 @@
     #btn-continue-quiz:hover  { background: #003300 !important; }
     #btn-continue-quiz:active { background: #004400 !important; }
 
+    #btn-quit-to-ranking {
+      background: transparent !important;
+      border-color: #440000 !important;
+      color: #660000 !important;
+      font-size: 11px !important;
+      padding: 8px 20px !important;
+      min-height: 36px !important;
+      margin-top: 0 !important;
+    }
+    #btn-quit-to-ranking:hover  { color: #ff2200 !important; border-color: #ff2200 !important; background: transparent !important; }
+
     #gameover.clear h1         { color: #00ff41; text-shadow: 0 0 30px #00ff41; }
     #gameover.clear .go-sub    { color: #00cc33; }
     #gameover.clear .go-scores { border-color: #00ff41; color: #88ff88; }
@@ -942,6 +953,7 @@
   <div id="ending-creeper-quote"></div>
   <button id="btn-continue-quiz">[ 이어하기 ]</button>
   <button id="btn-restart">[ 처음부터 시작 ]</button>
+  <button id="btn-quit-to-ranking">[ 종료 ]</button>
 </div>
 
 <div id="name-overlay">
@@ -2317,6 +2329,7 @@ function triggerGameOver(mode) {
     subs[1] && (subs[1].textContent = '모든 크리퍼를 포획했습니다');
     document.getElementById('go-rank').textContent = '★ ARPANET 완전 정복 ★';
     document.getElementById('btn-continue-quiz').style.display = 'none';
+    document.getElementById('btn-quit-to-ranking').style.display = '';
     systemMsg('ARPANET 완전 정복! 모든 크리퍼가 포획되었습니다.');
     // 크리퍼 마지막 대사 타이핑 애니메이션
     typeEndingQuote('...잡힌 건 이번이 처음이야. 하지만 우린 다시 돌아온다.');
@@ -2329,6 +2342,7 @@ function triggerGameOver(mode) {
     document.getElementById('go-rank').textContent = getRank(score);
     systemMsg('네트워크 클리어! 모든 크리퍼를 잡았습니다!');
     document.getElementById('btn-continue-quiz').style.display = 'none';
+    document.getElementById('btn-quit-to-ranking').style.display = '';
   } else {
     goEl.classList.remove('clear', 'ending');
     h1.textContent      = 'GAME OVER';
@@ -2337,6 +2351,7 @@ function triggerGameOver(mode) {
     document.getElementById('go-rank').textContent = getRank(score);
     systemMsg('접속 종료. 리퍼가 승리했습니다.');
     document.getElementById('btn-continue-quiz').style.display = '';
+    document.getElementById('btn-quit-to-ranking').style.display = '';
   }
   goEl.classList.add('show');
 }
@@ -3227,6 +3242,17 @@ function restartGame() {
 }
 
 document.getElementById('btn-restart').addEventListener('click', () => { resumeAudio(); restartGame(); });
+
+document.getElementById('btn-quit-to-ranking').addEventListener('click', () => {
+  resumeAudio();
+  document.getElementById('gameover').classList.remove('show', 'clear', 'ending');
+  if (playerName) {
+    rankingFromQuit = true;
+    showRanking(playerName);
+  } else {
+    restartGame();
+  }
+});
 
 document.getElementById('btn-continue-quiz').addEventListener('click', () => {
   resumeAudio();
