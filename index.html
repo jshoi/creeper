@@ -985,7 +985,6 @@
     크리퍼 포획 &nbsp;&nbsp;: <span id="go-caught">0</span><br>
     리퍼에게 삭제 &nbsp;: <span id="go-erased">0</span><br>
     생존 크리퍼 &nbsp;&nbsp;: <span id="go-alive">0</span><br>
-    생존 시간 &nbsp;&nbsp;&nbsp;&nbsp;: <span id="go-time">0s</span><br>
     총 점수 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <span id="go-score">0</span>
   </div>
   <div class="go-rank" id="go-rank"></div>
@@ -995,7 +994,6 @@
     <div id="stage-graph-legend">
       <div class="sg-legend-item"><span class="sg-legend-dot" style="background:#00ff41"></span>포획</div>
       <div class="sg-legend-item"><span class="sg-legend-dot" style="background:#ff4444"></span>삭제</div>
-      <div class="sg-legend-item"><span class="sg-legend-dot" style="background:#ffaa00"></span>생존시간(s)</div>
     </div>
   </div>
   <div id="ending-badge">★ ARPANET 완전 정복 ★</div>
@@ -1113,7 +1111,7 @@
     <span style="color:#ffff00">⚡ 스테이지마다 30% 확률로 아이템 출현!</span><br>
     <span style="color:#ff4400">⚠ 리퍼가 방해합니다. 조심하세요!</span>
   </p>
-  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.4.2</p>
+  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.4.3</p>
   <button id="btn-start">[ 시작 ]</button>
 </div>
 
@@ -2658,7 +2656,6 @@ function triggerGameOver(mode) {
   document.getElementById('go-caught').textContent = caughtCount;
   document.getElementById('go-erased').textContent = erasedCount;
   document.getElementById('go-alive').textContent  = alive;
-  document.getElementById('go-time').textContent   = Math.floor(totalTime/60) + 's';
   document.getElementById('go-score').textContent  = score;
 
   const goEl = document.getElementById('gameover');
@@ -3170,7 +3167,7 @@ const SKILL_DEFS = {
         duration: 0,
         apply(p) {
           const pc2 = player.center();
-          const vacRange = Math.min(canvas.width, canvas.height) * 0.45;
+          const vacRange = Math.min(canvas.width, canvas.height) * 0.90;
           let cnt = 0;
           for (const c of creepers) {
             if (!c.alive || c.isEgg) continue;
