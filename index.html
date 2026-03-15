@@ -829,7 +829,9 @@ class Player {
     const lerpSpeed = this.speedBoost ? 0.22 : 0.13;
     this.x += (this.tx - this.x) * lerpSpeed;
     this.y += (this.ty - this.y) * lerpSpeed;
-    this.x = Math.max(0, Math.min(canvas.width  - DRAW_W, this.x));
+    // 좌우 벽: 랩핑 — 반대편으로 이동
+    if (this.x + DRAW_W < 0)  { this.x = canvas.width; this.tx = canvas.width; }
+    if (this.x > canvas.width) { this.x = -DRAW_W; this.tx = -DRAW_W; }
     this.y = Math.max(0, Math.min(canvas.height - DRAW_H, this.y));
     this.flip = (this.x - prevX) < -0.1;
     this.trailTimer++;
@@ -899,7 +901,7 @@ class Player {
 //  Creeper
 // ═══════════════════════════════════════════════
 let idCounter = 0;
-const SPEED_BASE = 1.8;
+const SPEED_BASE = 2.34; // +30% 난이도
 
 // 한국어 크리퍼 대사
 const CREEPER_QUOTES = [
@@ -1006,13 +1008,13 @@ class Creeper {
       this.vy += Math.sin(ang) * 0.18;
     } else if (this.scared) {
       const ang   = Math.atan2(dy, dx);
-      const force = 0.55 + (scare - 130) * 0.004;
+      const force = 0.72 + (scare - 100) * 0.004; // +30% 탈출력
       this.vx -= Math.cos(ang) * force;
       this.vy -= Math.sin(ang) * force;
       if (!this.scaredTimer) {
         const q = ['저리 가!','잡으면 안 돼!','도망쳐야 해!','못 잡아!','빨리, 빨리!'];
         this.showQuote(q[Math.floor(Math.random() * q.length)], 65);
-        this.scaredTimer = 80;
+        this.scaredTimer = 200;
       }
     } else {
       if (Math.random() < 0.03) {
@@ -1067,8 +1069,10 @@ class Creeper {
     this.x += this.vx; this.y += this.vy;
 
     const W = canvas.width, H = canvas.height;
-    if (this.x < 0)          { this.x = 0;          this.vx =  Math.abs(this.vx); }
-    if (this.x > W - DRAW_W) { this.x = W - DRAW_W; this.vx = -Math.abs(this.vx); }
+    // 좌우 벽: 통과(랩핑) — 반대편으로 이동
+    if (this.x + DRAW_W < 0)  this.x = W;
+    if (this.x > W)           this.x = -DRAW_W;
+    // 상하 벽: 바운스
     if (this.y < 0)          { this.y = 0;           this.vy =  Math.abs(this.vy); }
     if (this.y > H - DRAW_H) { this.y = H - DRAW_H; this.vy = -Math.abs(this.vy); }
 
@@ -1077,7 +1081,7 @@ class Creeper {
       addTrail(this.x + DRAW_W/2 - PX, this.y + DRAW_H - PX*2, '#1a6a1a');
 
     if (this.quoteTimer > 0) this.quoteTimer--;
-      else if (!this.isSmall && Math.random() < 0.0015)
+      else if (!this.isSmall && Math.random() < 0.0004)
       this.showQuote(CREEPER_QUOTES[Math.floor(Math.random() * CREEPER_QUOTES.length)]);
 
     this.replicateTimer--;
@@ -1722,12 +1726,12 @@ function stageConfig(s) {
   const t = s - 1;
   return {
     creeperCount   : Math.min(2 + t, 10),
-    creeperSpeed   : Math.min(1.0 + t * 0.14, 2.2),
-    scareRadius    : Math.min(130 + t * 10, 200),
+    creeperSpeed   : Math.min(1.3 + t * 0.18, 2.8),  // +30% 난이도
+    scareRadius    : Math.min(100 + t * 8, 160),       // 도망 감지 줄임 (더 늦게 반응)
     maxCreepers    : Math.min(6 + t * 2, 18),
-    replicateTimer : Math.max(220 - t * 18, 80),
-    // 리퍼 등장: 15s → 8s → 최소 4s
-    reaperDelay    : Math.max(900 - t * 90, 240),
+    replicateTimer : Math.max(170 - t * 14, 60),       // 복제 더 빠름
+    // 리퍼 등장: 7.5s → 4s → 최소 2s (50% 단축)
+    reaperDelay    : Math.max(450 - t * 45, 120),
     maxReapers     : Math.min(1 + Math.floor(t / 2), 4),
     reaperBoost    : t * 0.22,
     reaperAccel    : Math.min(0.15 + t * 0.02, 0.32),
@@ -2302,6 +2306,7 @@ function updateUI() {
 // ═══════════════════════════════════════════════
 const chatLog = document.getElementById('chat-log');
 function addMsg(text, cls) {
+  if (cls === 'system-msg') return; // '/' 시스템 로그 표시 안 함
   const d = document.createElement('div');
   d.className = cls; d.textContent = text;
   chatLog.appendChild(d);
