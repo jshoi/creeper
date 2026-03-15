@@ -1064,7 +1064,7 @@
     <span style="color:#ffff00">⚡ 스테이지마다 30% 확률로 아이템 출현!</span><br>
     <span style="color:#ff4400">⚠ 리퍼가 방해합니다. 조심하세요!</span>
   </p>
-  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.4.0</p>
+  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.4.1</p>
   <button id="btn-start">[ 시작 ]</button>
 </div>
 
@@ -1708,8 +1708,9 @@ const REAPER_QUOTES_KR = [
   '크리퍼는 내 것.', '네가 먼저냐, 내가 먼저냐.',
 ];
 
-// 리퍼 방해 블록 (플레이어 앞 장벽)
-const reaperBlocks = []; // { x, y, w, h, timer }
+// 리퍼 레이저 (플레이어 직접 공격)
+// { x, y, vx, vy, timer, hit }
+const reaperLasers = [];
 
 // ── 스테이지 맵 벽 ──
 // { x, y, w, h } — 캔버스 비율로 startStage()에서 설정
@@ -1727,7 +1728,7 @@ class Reaper {
     this.frozenTimer = 0;
 
     // 방해 전술 쿨다운
-    this.blockCooldown    = 180;  // 장벽 생성 쿨다운
+    this.laserCooldown    = 180;  // 레이저 발사 쿨다운
     this.pushCooldown     = 0;    // 크리퍼 밀기 쿨다운
     this.blindCooldown    = 300;  // 시야 흑화 쿨다운
     this.teleportCooldown = 400;  // [stage5+] 크리퍼 텔레포트
@@ -1922,14 +1923,24 @@ class Reaper {
         const d  = Math.hypot(dx, dy);
         if (d > 1) { this.vx += (dx/d)*effectiveAccel; this.vy += (dy/d)*effectiveAccel; }
 
-        // ── 방해 1: 플레이어 이동 경로에 장벽 생성 (스테이지 3+) ──
-        if (stage >= 3 && this.blockCooldown <= 0 && pc && nearestCreeper) {
-          const tx = (pc.x + nearestCreeper.x) / 2;
-          const ty = (pc.y + nearestCreeper.y) / 2;
-          reaperBlocks.push({ x: tx - 60, y: ty - 10, w: 120, h: 20, timer: 180 });
-          this.blockCooldown = this.form === 'PREDATOR' ? 150 : 300;
-          if (!this.quoteTimer) this.showQuote('막아줄게!', 80);
-          SFX.block && SFX.block();
+        // ── 방해 1: 레이저 발사 (스테이지 3+) ──
+        if (stage >= 3 && this.laserCooldown <= 0 && pc) {
+          // 리퍼 중심 → 플레이어 중심 방향 벡터
+          const lx  = this.x + DRAW_W / 2;
+          const ly  = this.y + DRAW_H / 2;
+          const ddx = pc.x - lx, ddy = pc.y - ly;
+          const ddd = Math.hypot(ddx, ddy) || 1;
+          const spd = 6.5; // 레이저 속도
+          reaperLasers.push({
+            x: lx, y: ly,
+            vx: (ddx / ddd) * spd,
+            vy: (ddy / ddd) * spd,
+            timer: 90, // ~1.5초 수명
+            hit: false,
+          });
+          this.laserCooldown = this.form === 'PREDATOR' ? 120 : (this.form === 'HUNTER' ? 210 : 300);
+          if (!this.quoteTimer) this.showQuote('받아라!', 70);
+          SFX.laser && SFX.laser();
         }
 
         // ── 방해 3: 시야 흑화 (스테이지 4+) ──
@@ -2043,7 +2054,7 @@ class Reaper {
     }
 
     // 쿨다운 감소
-    if (this.blockCooldown    > 0) this.blockCooldown--;
+    if (this.laserCooldown    > 0) this.laserCooldown--;
     if (this.pushCooldown     > 0) this.pushCooldown--;
     if (this.blindCooldown    > 0) this.blindCooldown--;
     if (this.teleportCooldown > 0) this.teleportCooldown--;
@@ -2253,42 +2264,72 @@ function applyWallsToPlayer() {
   }
 }
 
-// 장벽 그리기
-function drawReaperBlocks() {
-  for (let i = reaperBlocks.length - 1; i >= 0; i--) {
-    const b = reaperBlocks[i];
-    b.timer--;
-    if (b.timer <= 0) { reaperBlocks.splice(i, 1); continue; }
-    const alpha = Math.min(1, b.timer / 30);
-    ctx.save();
-    ctx.globalAlpha = alpha * 0.7;
-    ctx.fillStyle   = '#cc00ff';
-    ctx.fillRect(b.x, b.y, b.w, b.h);
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = '#ff00ff';
-    ctx.lineWidth   = 1;
-    ctx.strokeRect(b.x, b.y, b.w, b.h);
-    ctx.restore();
-  }
-}
+// 레이저 업데이트 · 충돌 · 그리기
+function updateReaperLasers() {
+  const W = canvas.width, H = canvas.height;
+  for (let i = reaperLasers.length - 1; i >= 0; i--) {
+    const l = reaperLasers[i];
+    l.timer--;
+    if (l.timer <= 0 || l.hit) { reaperLasers.splice(i, 1); continue; }
 
-// 장벽 플레이어 충돌 — 이동 방해
-function applyBlocksToPlayer() {
-  for (const b of reaperBlocks) {
-    const px = player.x, py = player.y;
-    if (px + DRAW_W > b.x && px < b.x + b.w &&
-        py + DRAW_H > b.y && py < b.y + b.h) {
-      // 블록 밖으로 밀어냄
-      const overlapL = (px + DRAW_W) - b.x;
-      const overlapR = (b.x + b.w)   - px;
-      const overlapT = (py + DRAW_H) - b.y;
-      const overlapB = (b.y + b.h)   - py;
-      const minO = Math.min(overlapL, overlapR, overlapT, overlapB);
-      if (minO === overlapL) { player.x -= overlapL * 0.5; player.tx = player.x; }
-      else if (minO === overlapR) { player.x += overlapR * 0.5; player.tx = player.x; }
-      else if (minO === overlapT) { player.y -= overlapT * 0.5; player.ty = player.y; }
-      else { player.y += overlapB * 0.5; player.ty = player.y; }
+    l.x += l.vx; l.y += l.vy;
+
+    // 맵 밖으로 나가면 제거
+    if (l.x < -20 || l.x > W + 20 || l.y < -20 || l.y > H + 20) {
+      reaperLasers.splice(i, 1); continue;
     }
+
+    // 플레이어 충돌 판정 (무적/방패 스킬 중엔 무시)
+    if (!invincible && hitCooldown <= 0 &&
+        !(player.skill_shieldTimer > 0) && !(player.skill_bubbleTimer > 0)) {
+      const pc2 = player.center();
+      if (Math.hypot(l.x - pc2.x, l.y - pc2.y) < DRAW_W * 0.7) {
+        l.hit = true;
+        playerHearts--;
+        hitCooldown = 120;
+        spawnParticles(l.x, l.y, '#ff0066', 14);
+        SFX.playerHit();
+        player.showQuote('아!', 60);
+        updateUI();
+        if (playerHearts <= 0) {
+          triggerGameOver('lose');
+          return;
+        }
+      }
+    }
+
+    // 그리기 — 레이저 선 + 발광
+    ctx.save();
+    const fade = Math.min(1, l.timer / 20);
+    ctx.globalAlpha = fade;
+
+    // 발광 외곽선
+    ctx.strokeStyle = '#ff44cc';
+    ctx.lineWidth   = 6;
+    ctx.shadowColor = '#ff00aa';
+    ctx.shadowBlur  = 12;
+    ctx.beginPath();
+    ctx.moveTo(l.x - l.vx * 3, l.y - l.vy * 3);
+    ctx.lineTo(l.x, l.y);
+    ctx.stroke();
+
+    // 코어 선
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth   = 2;
+    ctx.shadowBlur  = 4;
+    ctx.beginPath();
+    ctx.moveTo(l.x - l.vx * 3, l.y - l.vy * 3);
+    ctx.lineTo(l.x, l.y);
+    ctx.stroke();
+
+    // 탄두 원
+    ctx.fillStyle   = '#ff00cc';
+    ctx.shadowBlur  = 8;
+    ctx.beginPath();
+    ctx.arc(l.x, l.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
   }
 }
 
@@ -2333,7 +2374,7 @@ const SFX = {
   reaperErase(){ beep(300,'sawtooth',0.15,0.05); beep(150,'sawtooth',0.18,0.15,0.05,50); },
   gameOver()   { [440,330,220,110].forEach((f,i)=>beep(f,'sawtooth',0.22,0.25,i*0.22)); beep(80,'sawtooth',0.3,0.8,0.9,40); },
   playerHit()  { beep(100,'sawtooth',0.25,0.05); beep(80,'sawtooth',0.28,0.3,0.05,30); },
-  block()      { beep(400,'square',0.12,0.04); beep(250,'square',0.10,0.06,0.04); },
+  laser()      { beep(900,'sawtooth',0.14,0.03); beep(600,'sawtooth',0.10,0.06,0.03,200); },
   blind()      { beep(80,'sawtooth',0.20,0.4,0,40); beep(60,'sawtooth',0.18,0.4,0.4,30); },
 };
 
@@ -2815,7 +2856,7 @@ function triggerStageClear() {
 function startStage() {
   const cfg = stageConfig(stage);
   creepers = []; reapers = [];
-  reaperBlocks.length = 0;
+  reaperLasers.length = 0;
   itemBoxes = [];
   stageWalls = buildStageWalls(stage);
   screenShake = 0;
@@ -2864,7 +2905,7 @@ function startStage() {
   ];
   systemMsg(wp.join('  '));
   if (stage === 2) systemMsg('⚠ [MAP: 중앙 섬] 리퍼가 당신을 직접 추격합니다!');
-  if (stage === 3) systemMsg('⚠ [MAP: 이중층] 좌우 교차 발판 등장! 리퍼가 장벽을 설치합니다!');
+  if (stage === 3) systemMsg('⚠ [MAP: 이중층] 좌우 교차 발판 등장! 리퍼가 레이저를 발사합니다!');
   if (stage === 4) systemMsg('⚠ [MAP: 삼층구조] 3단 발판! 두 번째 리퍼 등장! 시야 차단 주의!');
   if (stage === 5) systemMsg('⚠ [MAP: 십자형] 리퍼가 크리퍼를 텔레포트합니다! 자손은 알(Egg) 형태!');
   if (stage === 6) systemMsg('⚠ [MAP: 계단형] 리퍼가 화면을 흔듭니다!');
@@ -3446,7 +3487,7 @@ document.getElementById('quiz-continue').addEventListener('click', () => {
   player.tx = player.x; player.ty = player.y;
   player.blindTimer = 0; player.blinded = false;
   trails.length = 0; particles.length = 0;
-  reaperBlocks.length = 0;
+  reaperLasers.length = 0;
   stageClearPending = false;
   updateHeartsUI();
   systemMsg('--- 재접속 성공! 이어하기 시작 ---');
@@ -3469,7 +3510,7 @@ function restartGame() {
   document.getElementById('gameover').classList.remove('show', 'clear', 'ending');
   document.getElementById('ranking-overlay').classList.remove('show');
   creepers = []; reapers = [];
-  reaperBlocks.length = 0;
+  reaperLasers.length = 0;
   stageWalls = []; screenShake = 0;
   caughtCount = 0; erasedCount = 0; reaperEraseScore = 0;
   gameTime = 0; totalTime = 0; stage = 1;
@@ -3771,9 +3812,9 @@ const RESPONSES = [
   { keys: ['다시','retry','재시작','또','restart'],
     replies: ['돌아왔군. 존중해.','도전할수록 느려지는 건 너야. 나는 그대로.',
       '다시 해봐. 난 여기 있을게. 복제하면서.','돌아온 거 환영해. 이번에도 못 잡아.'] },
-  { keys: ['리퍼 방해','장벽','막아','블록','block'],
-    replies: ['리퍼가 장벽을 놓는 거야. 우회해!','리퍼는 우리 편이 아니야. 서로 경쟁자지.',
-      '장벽? 리퍼의 새 전술이야. 조심해.','리퍼도 크리퍼를 지우려 해. 우린 다 피해야 해.'] },
+  { keys: ['리퍼 방해','레이저','쏴','laser','공격','attack'],
+    replies: ['리퍼가 레이저를 쏜다! 피해!','리퍼는 우리 공통의 적이야. 둘 다 조심해.',
+      '레이저? 리퍼의 새 전술이야. 움직여!','리퍼도 크리퍼를 지우려 해. 우린 다 피해야 해.'] },
 ];
 
 function handleChat(input) {
@@ -3901,8 +3942,6 @@ function loop() {
   player.update();
   invincible = (gameTime <= cfg.invincibleTime);
 
-  // 장벽 적용
-  applyBlocksToPlayer();
   applyWallsToPlayer();
 
   // 포획 (무적 중 불가)
@@ -4042,7 +4081,7 @@ function loop() {
   updateTrails();
   drawTrails();
   drawStageWalls();
-  drawReaperBlocks();
+  updateReaperLasers();
   drawItemBoxes();
   player.draw();
   for (const c of creepers) c.draw();
