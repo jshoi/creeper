@@ -276,6 +276,14 @@
     #gameover button:hover  { background: #330000; }
     #gameover button:active { background: #440000; }
 
+    #btn-continue-quiz {
+      background: #001a00 !important;
+      border-color: #00ff41 !important;
+      color: #00ff41 !important;
+    }
+    #btn-continue-quiz:hover  { background: #003300 !important; }
+    #btn-continue-quiz:active { background: #004400 !important; }
+
     #gameover.clear h1         { color: #00ff41; text-shadow: 0 0 30px #00ff41; }
     #gameover.clear .go-sub    { color: #00cc33; }
     #gameover.clear .go-scores { border-color: #00ff41; color: #88ff88; }
@@ -283,6 +291,45 @@
     #gameover.clear button     { border-color: #00ff41; color: #00ff41; background: #001a00; }
     #gameover.clear button:hover  { background: #003300; }
     #gameover.clear button:active { background: #004400; }
+
+    /* ── 엔딩 화면 ── */
+    #gameover.ending h1 {
+      font-size: 28px;
+      color: #ffdd00;
+      text-shadow: 0 0 40px #ffaa00, 0 0 80px #ff6600;
+      letter-spacing: 4px;
+      animation: endingPulse 2s ease-in-out infinite;
+    }
+    @keyframes endingPulse {
+      0%,100% { text-shadow: 0 0 30px #ffaa00, 0 0 60px #ff6600; }
+      50%      { text-shadow: 0 0 60px #ffdd00, 0 0 120px #ffaa00; }
+    }
+    #gameover.ending .go-sub    { color: #ffaa00; }
+    #gameover.ending .go-scores { border-color: #ffdd00; color: #ffe680; }
+    #gameover.ending .go-rank   { color: #ffdd00; font-size: 20px; }
+    #gameover.ending button     { border-color: #ffdd00; color: #ffdd00; background: #1a1200; }
+    #gameover.ending button:hover  { background: #2a2000; }
+    #gameover.ending button:active { background: #3a2e00; }
+    #ending-badge {
+      font-size: 11px;
+      color: #ffaa00;
+      border: 1px solid #ffaa00;
+      padding: 4px 14px;
+      letter-spacing: 3px;
+      margin-top: 6px;
+      display: none;
+    }
+    #gameover.ending #ending-badge { display: block; }
+    #ending-creeper-quote {
+      font-size: 13px;
+      color: #00ff41;
+      font-style: italic;
+      letter-spacing: 1px;
+      min-height: 22px;
+      margin-top: 4px;
+      display: none;
+    }
+    #gameover.ending #ending-creeper-quote { display: block; }
 
     /* ── 인트로 서사 오버레이 ── */
     #intro-overlay {
@@ -660,6 +707,9 @@
     총 점수 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <span id="go-score">0</span>
   </div>
   <div class="go-rank" id="go-rank"></div>
+  <div id="ending-badge">★ ARPANET 완전 정복 ★</div>
+  <div id="ending-creeper-quote"></div>
+  <button id="btn-continue-quiz">[ 이어하기 ]</button>
   <button id="btn-restart">[ 처음부터 시작 ]</button>
 </div>
 
@@ -698,7 +748,7 @@
   <div id="quiz-options"></div>
   <div id="quiz-result"></div>
   <button id="quiz-continue">[ 이어하기 ]</button>
-  <button id="quiz-give-up">포기하고 처음부터</button>
+  <button id="quiz-give-up">종료</button>
 </div>
 
 <div id="ui-bottom">
@@ -1151,7 +1201,6 @@ class Creeper {
     if (!this.isSmall && !invincible && this.lureTimer <= 0 && Math.random() < 0.0008) {
       this.luring    = true;
       this.lureTimer = 60 + Math.floor(Math.random() * 60);
-      if (!this.quoteTimer) this.showQuote('(따라와봐...)', 80);
     }
     if (this.lureTimer > 0) this.lureTimer--;
     else this.luring = false;
@@ -1169,8 +1218,6 @@ class Creeper {
       this.vx -= Math.cos(ang) * force;
       this.vy -= Math.sin(ang) * force;
       if (!this.scaredTimer) {
-        const q = ['저리 가!','잡으면 안 돼!','도망쳐야 해!','못 잡아!','빨리, 빨리!'];
-        this.showQuote(q[Math.floor(Math.random() * q.length)], 65);
         this.scaredTimer = 200;
       }
     } else {
@@ -1190,7 +1237,7 @@ class Creeper {
         const ang = Math.atan2(rdy, rdx);
         this.vx -= Math.cos(ang) * 1.0;
         this.vy -= Math.sin(ang) * 1.0;
-        if (rd < 100 && !this.quoteTimer) this.showQuote('리퍼다! 도망!', 80);
+        // 리퍼 근접: 말풍선 없음 (플레이어 채팅 시에만 반응)
       }
     }
 
@@ -1238,8 +1285,6 @@ class Creeper {
       addTrail(this.x + DRAW_W/2 - PX, this.y + DRAW_H - PX*2, '#1a6a1a');
 
     if (this.quoteTimer > 0) this.quoteTimer--;
-      else if (!this.isSmall && Math.random() < 0.0004)
-      this.showQuote(CREEPER_QUOTES[Math.floor(Math.random() * CREEPER_QUOTES.length)]);
 
     this.replicateTimer--;
   }
@@ -1818,6 +1863,7 @@ canvas.addEventListener('click', () => {
 //  캐릭터명 / 리더보드
 // ═══════════════════════════════════════════════
 let playerName = '';
+let rankingFromQuit = false; // 종료 버튼으로 순위 화면을 열었을 때 true
 
 const LEADERBOARD_KEY = 'creeper_leaderboard_v1';
 
@@ -1918,9 +1964,10 @@ function triggerGameOver(mode) {
   stopBGM();
   SFX.gameOver();
 
-  const isClear = (mode === 'clear');
-  const score   = Math.max(0, calcScore() + (isClear ? 1000 : 0));
-  const alive   = creepers.filter(c => c.alive).length;
+  const isEnding = (mode === 'ending');
+  const isClear  = (mode === 'clear') || isEnding;
+  const score    = Math.max(0, calcScore() + (isClear ? 1000 : 0));
+  const alive    = creepers.filter(c => c.alive).length;
 
   document.getElementById('go-stage').textContent  = stage;
   document.getElementById('go-hearts').textContent = '♥'.repeat(playerHearts) + '♡'.repeat(MAX_HEARTS - playerHearts);
@@ -1935,37 +1982,50 @@ function triggerGameOver(mode) {
   const subs = goEl.querySelectorAll('.go-sub');
 
   // 점수 저장 (캐릭터명이 있을 때만)
-  let savedLb = null;
-  if (playerName) {
-    savedLb = recordScore(playerName, score);
-  }
+  if (playerName) recordScore(playerName, score);
 
-  if (isClear) {
+  if (isEnding) {
+    // ── 최종 엔딩 ──
+    goEl.classList.remove('clear');
+    goEl.classList.add('ending');
+    h1.textContent      = 'MISSION COMPLETE';
+    subs[0].textContent = '— ARPANET 1971 —';
+    subs[1] && (subs[1].textContent = '모든 크리퍼를 포획했습니다');
+    document.getElementById('go-rank').textContent = '★ ARPANET 완전 정복 ★';
+    document.getElementById('btn-continue-quiz').style.display = 'none';
+    systemMsg('ARPANET 완전 정복! 모든 크리퍼가 포획되었습니다.');
+    // 크리퍼 마지막 대사 타이핑 애니메이션
+    typeEndingQuote('...잡힌 건 이번이 처음이야. 하지만 우린 다시 돌아온다.');
+  } else if (isClear) {
+    goEl.classList.remove('ending');
     goEl.classList.add('clear');
     h1.textContent      = '네트워크 클리어!';
     subs[0].textContent = '— 모든 크리퍼 포획 —';
     subs[1] && (subs[1].textContent = '+1000 클리어 보너스');
     document.getElementById('go-rank').textContent = getRank(score);
     systemMsg('네트워크 클리어! 모든 크리퍼를 잡았습니다!');
+    document.getElementById('btn-continue-quiz').style.display = 'none';
   } else {
-    goEl.classList.remove('clear');
+    goEl.classList.remove('clear', 'ending');
     h1.textContent      = 'GAME OVER';
     subs[0].textContent = '— 시스템 종료 —';
     subs[1] && (subs[1].textContent = '리퍼에게 잡혔습니다');
     document.getElementById('go-rank').textContent = getRank(score);
     systemMsg('접속 종료. 리퍼가 승리했습니다.');
+    document.getElementById('btn-continue-quiz').style.display = '';
   }
   goEl.classList.add('show');
+}
 
-  // 순위 화면: 1.2초 후 표시
-  if (playerName && savedLb) {
-    setTimeout(() => showRanking(playerName), 1200);
-  }
-
-  // 게임오버(패배)일 때만 퀴즈 이어하기 제공 (클리어 시 제외)
-  if (!isClear) {
-    setTimeout(() => showQuiz(), 800);
-  }
+// 크리퍼 마지막 대사 타이핑 애니메이션
+function typeEndingQuote(text) {
+  const el = document.getElementById('ending-creeper-quote');
+  el.textContent = '';
+  let i = 0;
+  const iv = setInterval(() => {
+    el.textContent += text[i++];
+    if (i >= text.length) clearInterval(iv);
+  }, 55);
 }
 
 // ═══════════════════════════════════════════════
@@ -2118,12 +2178,27 @@ function buildStageWalls(s) {
   }
 }
 
+const MAX_STAGE = 10;
+
 function triggerStageClear() {
   running = false;
   stopBGM();
   SFX.catch();
   setTimeout(() => SFX.catch(), 150);
   setTimeout(() => SFX.catch(), 300);
+
+  // ── 스테이지 10 클리어 = 최종 엔딩 ──
+  if (stage >= MAX_STAGE) {
+    const sc = document.getElementById('stageclear');
+    document.getElementById('sc-clear-sub').textContent   = `— STAGE ${stage} 완료 —`;
+    document.getElementById('sc-clear-title').textContent  = 'MISSION COMPLETE';
+    document.getElementById('sc-clear-bonus').textContent  = '★ ARPANET 완전 정복 ★';
+    document.getElementById('sc-clear-next').textContent   = '모든 크리퍼가 포획되었습니다';
+    sc.classList.add('show');
+    systemMsg(`STAGE ${stage} 클리어! ARPANET 완전 정복!`);
+    setTimeout(() => { sc.classList.remove('show'); triggerGameOver('ending'); }, 3500);
+    return;
+  }
 
   const cfg   = stageConfig(stage);
   const bonus = cfg.clearBonus;
@@ -2384,7 +2459,7 @@ document.getElementById('quiz-continue').addEventListener('click', () => {
   if (!quizCorrect) return;
   closeQuiz();
   // 이어하기: 게임오버 오버레이 닫고 같은 스테이지에서 재개
-  document.getElementById('gameover').classList.remove('show', 'clear');
+  document.getElementById('gameover').classList.remove('show', 'clear', 'ending');
   playerHearts = MAX_HEARTS;
   hitCooldown = 0;
   invincible = false;
@@ -2403,11 +2478,17 @@ document.getElementById('quiz-continue').addEventListener('click', () => {
 
 document.getElementById('quiz-give-up').addEventListener('click', () => {
   closeQuiz();
-  restartGame();
+  document.getElementById('gameover').classList.remove('show', 'clear', 'ending');
+  if (playerName) {
+    rankingFromQuit = true;
+    showRanking(playerName);
+  } else {
+    restartGame();
+  }
 });
 
 function restartGame() {
-  document.getElementById('gameover').classList.remove('show', 'clear');
+  document.getElementById('gameover').classList.remove('show', 'clear', 'ending');
   document.getElementById('ranking-overlay').classList.remove('show');
   creepers = []; reapers = [];
   reaperBlocks.length = 0;
@@ -2431,6 +2512,11 @@ function restartGame() {
 }
 
 document.getElementById('btn-restart').addEventListener('click', () => { resumeAudio(); restartGame(); });
+
+document.getElementById('btn-continue-quiz').addEventListener('click', () => {
+  resumeAudio();
+  showQuiz();
+});
 
 // ═══════════════════════════════════════════════
 //  아이템 박스 시스템
@@ -3112,9 +3198,13 @@ document.getElementById('name-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('name-confirm').click();
 });
 
-// 순위 닫기 버튼 — 닫으면 퀴즈가 이미 뜨거나 게임오버 화면으로 돌아감
+// 순위 닫기 버튼
 document.getElementById('ranking-close').addEventListener('click', () => {
   document.getElementById('ranking-overlay').classList.remove('show');
+  if (rankingFromQuit) {
+    rankingFromQuit = false;
+    restartGame();
+  }
 });
 </script>
 </body>
