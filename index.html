@@ -1064,7 +1064,7 @@
     <span style="color:#ffff00">⚡ 스테이지마다 30% 확률로 아이템 출현!</span><br>
     <span style="color:#ff4400">⚠ 리퍼가 방해합니다. 조심하세요!</span>
   </p>
-  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.3.0</p>
+  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.3.1</p>
   <button id="btn-start">[ 시작 ]</button>
 </div>
 
@@ -2294,12 +2294,12 @@ function getRank(score) {
 }
 
 function triggerGameOver(mode) {
-  if (!running) return;
+  const isEnding = (mode === 'ending');
+  // 엔딩은 triggerStageClear()가 이미 running=false로 설정 후 호출하므로 가드 예외 처리
+  if (!running && !isEnding) return;
   running = false;
   stopBGM();
   SFX.gameOver();
-
-  const isEnding = (mode === 'ending');
   const isClear  = (mode === 'clear') || isEnding;
   const score    = Math.max(0, calcScore() + (isClear ? 1000 : 0));
   const alive    = creepers.filter(c => c.alive).length;
