@@ -1064,7 +1064,7 @@
     <span style="color:#ffff00">⚡ 스테이지마다 30% 확률로 아이템 출현!</span><br>
     <span style="color:#ff4400">⚠ 리퍼가 방해합니다. 조심하세요!</span>
   </p>
-  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.3.1</p>
+  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.4.0</p>
   <button id="btn-start">[ 시작 ]</button>
 </div>
 
@@ -1735,9 +1735,81 @@ class Reaper {
     this.dashCooldown     = 240;  // [stage7+] 리퍼 돌진
     this.dashing          = false;
     this.dashTimer        = 0;
+
+    // ── 진화 시스템 ──
+    this.reaperKills  = 0;        // 이 리퍼가 삭제한 크리퍼 수
+    this.form         = 'IDLE';   // 'IDLE' | 'HUNTER' | 'PREDATOR'
+    this.evolveFlash  = 0;        // 진화 연출 타이머 (프레임)
+    this._lastErased  = 0;        // 자동 대사용 삭제 카운터 캐시
+
+    // ── 패턴 순환 시스템 ──
+    this.phase        = 'CHASE';  // 'CHASE' | 'AMBUSH' | 'SWEEP'
+    this.phaseTimer   = 900;      // 현재 페이즈 남은 프레임
+    this.sweepDir     = { vx: 1, vy: 0 }; // SWEEP 진행 방향
+    this.sweepWarn    = 0;        // SWEEP 예고선 표시 타이머
+    this.ambushTarget = null;     // AMBUSH 대기 좌표 { x, y }
+
+    // ── 기억 시스템 ──
+    this.chaseAccum   = 0;        // 플레이어 추격 누적 프레임
+    this.predicting   = false;    // 예측 이동 중 여부
+    this.predictTgt   = null;     // 예측 목표 { x, y }
+    this.predictMark  = 0;        // × 마커 표시 타이머
+    this._warnedLowHP = false;    // HP1 경고 대사 출력 여부
   }
 
   showQuote(text, d) { this.quote = text; this.quoteTimer = d || 100; }
+
+  // ── 진화 트리거 ──
+  evolve(form) {
+    this.form       = form;
+    this.evolveFlash = 90;
+    screenShake      = 20;
+    const labels     = { HUNTER: '▲ 사냥꾼 모드 진입', PREDATOR: '▲▲ 포식자 모드 진입' };
+    const quotes     = { HUNTER: '더 빨라졌다.', PREDATOR: '이제 아무도 못 막아.' };
+    systemMsg(`⚠ 리퍼 진화: ${labels[form]}`);
+    this.showQuote(quotes[form], 140);
+    SFX.reaperArrive();
+  }
+
+  // ── 페이즈 전환 ──
+  tickPhase(pc) {
+    this.phaseTimer--;
+    if (this.phaseTimer <= 0) {
+      const seq  = { CHASE: 'AMBUSH', AMBUSH: 'SWEEP', SWEEP: 'CHASE' };
+      const dur  = { CHASE: 900, AMBUSH: 480, SWEEP: 600 };
+      this.phase = seq[this.phase];
+      this.phaseTimer = dur[this.phase];
+      // 페이즈 시작 처리
+      if (this.phase === 'SWEEP') {
+        // 진행 방향: 현재 속도 벡터 정규화, 없으면 랜덤
+        const spd = Math.hypot(this.vx, this.vy);
+        if (spd > 0.1) {
+          this.sweepDir = { vx: this.vx / spd, vy: this.vy / spd };
+        } else {
+          const a = Math.random() * Math.PI * 2;
+          this.sweepDir = { vx: Math.cos(a), vy: Math.sin(a) };
+        }
+        this.sweepWarn = 180; // 3초 예고
+        setTimeout(() => creeperMsg('리퍼가 달려온다! 비켜!'), 0);
+      }
+      if (this.phase === 'AMBUSH') {
+        // 크리퍼 밀집 지점 또는 랜덤 위치에 매복
+        const alive = (typeof creepers !== 'undefined') ? creepers.filter(c => c.alive) : [];
+        if (alive.length > 0) {
+          const t = alive[Math.floor(Math.random() * alive.length)];
+          this.ambushTarget = { x: t.x, y: t.y };
+        } else {
+          this.ambushTarget = { x: canvas.width * 0.5, y: canvas.height * 0.5 };
+        }
+        setTimeout(() => creeperMsg('리퍼가... 멈췄어. 조심해.'), 0);
+      }
+      if (this.phase === 'CHASE') {
+        this.predicting = false;
+        this.chaseAccum = 0;
+      }
+    }
+    if (this.sweepWarn > 0) this.sweepWarn--;
+  }
 
   update(creepers, playerRef) {
     if (!this.alive) return;
@@ -1758,85 +1830,176 @@ class Reaper {
 
     const pc = playerRef ? playerRef.center() : null;
     const pd = pc ? Math.hypot(pc.x - (this.x+DRAW_W/2), pc.y - (this.y+DRAW_H/2)) : Infinity;
-    const chasePlayer = (stage >= 2) && pc && (pd < ncd * 1.2);
 
     const rcfg  = stageConfig(stage);
     const accel = rcfg.reaperAccel;
 
-    if (chasePlayer) {
-      const dx = pc.x - (this.x + DRAW_W/2);
-      const dy = pc.y - (this.y + DRAW_H/2);
-      const d  = Math.hypot(dx, dy);
-      if (d > 1) { this.vx += (dx/d)*accel; this.vy += (dy/d)*accel; }
+    // ── 진화 폼에 따른 accel/속도 배수 ──
+    const formAccelMult = this.form === 'PREDATOR' ? 1.7 : this.form === 'HUNTER' ? 1.4 : 1.0;
+    const effectiveAccel = accel * formAccelMult;
 
-      // ── 방해 1: 플레이어 이동 경로에 장벽 생성 (스테이지 3+) ──
-      if (stage >= 3 && this.blockCooldown <= 0 && pc && nearestCreeper) {
-        const tx = (pc.x + nearestCreeper.x) / 2;
-        const ty = (pc.y + nearestCreeper.y) / 2;
-        reaperBlocks.push({ x: tx - 60, y: ty - 10, w: 120, h: 20, timer: 180 });
-        this.blockCooldown = 300;
-        if (!this.quoteTimer) this.showQuote('막아줄게!', 80);
-        SFX.block && SFX.block();
+    // ── 패턴 순환 tick (stage 3+) ──
+    if (stage >= 3) this.tickPhase(pc);
+
+    // PREDATOR 폼: 플레이어 우선 추격 (stage 무관)
+    const formForcesChase = this.form === 'PREDATOR' && pc;
+    const chasePlayer = formForcesChase || ((stage >= 2) && pc && (pd < ncd * 1.2));
+
+    // ── 기억 시스템: 플레이어 추격 중 이동 예측 ──
+    if (chasePlayer && pc && playerHistory.length >= 60) {
+      this.chaseAccum++;
+      if (this.chaseAccum > 600) {
+        const old = playerHistory[playerHistory.length - 61];
+        const cur = playerHistory[playerHistory.length - 1];
+        const avgVx = (cur.x - old.x) / 60;
+        const avgVy = (cur.y - old.y) / 60;
+        // 예측 정확도: 스테이지가 높을수록 향상
+        const weight = Math.min(0.5 + (stage - 1) * 0.06, 1.2);
+        const tx = pc.x + avgVx * 90 * weight;
+        const ty = pc.y + avgVy * 90 * weight;
+        // 맵 내 클램프
+        this.predictTgt = {
+          x: Math.max(0, Math.min(canvas.width  - DRAW_W, tx)),
+          y: Math.max(0, Math.min(canvas.height - DRAW_H, ty)),
+        };
+        this.predicting  = true;
+        this.predictMark = 90;
       }
+    } else {
+      if (!chasePlayer) { this.chaseAccum = 0; this.predicting = false; }
+    }
+    if (this.predictMark > 0) this.predictMark--;
 
-      // ── 방해 3: 시야 흑화 (스테이지 4+) ──
-      if (stage >= 4 && this.blindCooldown <= 0 && pd < DRAW_W * 5) {
-        playerRef.blindTimer  = 180; // 3초
-        this.blindCooldown    = 600;
-        if (!this.quoteTimer) this.showQuote('눈이 안 보이지?', 100);
-        SFX.blind && SFX.blind();
+    // ── 페이즈별 이동 ──
+    const ph = (stage >= 3) ? this.phase : 'CHASE';
+
+    if (ph === 'SWEEP') {
+      // 고정 방향 직선 이동 (방향 전환 없음)
+      const sweepSpd = (REAPER_SPEED + rcfg.reaperBoost) * formAccelMult * 1.8;
+      this.vx = this.sweepDir.vx * sweepSpd;
+      this.vy = this.sweepDir.vy * sweepSpd;
+    } else if (ph === 'AMBUSH') {
+      // 매복 지점으로 이동 후 정지
+      if (this.ambushTarget) {
+        const dx = this.ambushTarget.x - this.x;
+        const dy = this.ambushTarget.y - this.y;
+        const d  = Math.hypot(dx, dy);
+        if (d > DRAW_W * 0.5) {
+          this.vx += (dx/d) * effectiveAccel * 1.5;
+          this.vy += (dy/d) * effectiveAccel * 1.5;
+        } else {
+          // 도착 — 감속
+          this.vx *= 0.7; this.vy *= 0.7;
+        }
       }
-
-      if (!this.quoteTimer && Math.random() < 0.005) {
-        const hunts = ['찾았다, 인간.', '숨을 곳 없어.', '다음은 너야.', '락온!'];
-        this.showQuote(hunts[Math.floor(Math.random()*hunts.length)], 100);
+      // AMBUSH 중에도 크리퍼 삭제는 유지
+      if (nearestCreeper) {
+        const dx2 = (nearestCreeper.x + DRAW_W/2) - (this.x + DRAW_W/2);
+        const dy2 = (nearestCreeper.y + DRAW_H/2) - (this.y + DRAW_H/2);
+        const d2  = Math.hypot(dx2, dy2);
+        if (d2 < DRAW_W * 0.8) {
+          nearestCreeper.alive = false;
+          erasedCount++;
+          reaperEraseScore += 100;
+          this.reaperKills++;
+          SFX.reaperErase();
+          spawnParticles(nearestCreeper.x, nearestCreeper.y, '#cc00ff', 18);
+          updateUI();
+          if (!this.quoteTimer) this.showQuote('잠복 성공.', 80);
+          systemMsg(`리퍼가 크리퍼 #${nearestCreeper.id}를 포획! -100점`);
+          // 진화 체크
+          if (this.reaperKills === 3 && this.form === 'IDLE')   this.evolve('HUNTER');
+          if (this.reaperKills === 6 && this.form === 'HUNTER') this.evolve('PREDATOR');
+        }
       }
-    } else if (nearestCreeper) {
-      const dx = (nearestCreeper.x + DRAW_W/2) - (this.x + DRAW_W/2);
-      const dy = (nearestCreeper.y + DRAW_H/2) - (this.y + DRAW_H/2);
-      const d  = Math.hypot(dx, dy);
-      if (d > 1) { this.vx += (dx/d)*accel; this.vy += (dy/d)*accel; }
+    } else {
+      // CHASE 페이즈 (기본)
+      if (chasePlayer) {
+        // 기억 시스템: 예측 이동
+        const target = (this.predicting && this.predictTgt) ? this.predictTgt : pc;
+        const dx = target.x - (this.x + DRAW_W/2);
+        const dy = target.y - (this.y + DRAW_H/2);
+        const d  = Math.hypot(dx, dy);
+        if (d > 1) { this.vx += (dx/d)*effectiveAccel; this.vy += (dy/d)*effectiveAccel; }
 
-      // ── 방해 2: 크리퍼를 플레이어 반대 방향으로 밀어냄 (스테이지 2+) ──
-      if (stage >= 2 && this.pushCooldown <= 0 && pc && d < DRAW_W * 6) {
-        const awayX = nearestCreeper.x - pc.x;
-        const awayY = nearestCreeper.y - pc.y;
-        const awayD = Math.hypot(awayX, awayY) || 1;
-        nearestCreeper.vx += (awayX/awayD) * 4;
-        nearestCreeper.vy += (awayY/awayD) * 4;
-        this.pushCooldown = 180;
-        if (!this.quoteTimer) this.showQuote('저리 가!', 70);
-      }
+        // ── 방해 1: 플레이어 이동 경로에 장벽 생성 (스테이지 3+) ──
+        if (stage >= 3 && this.blockCooldown <= 0 && pc && nearestCreeper) {
+          const tx = (pc.x + nearestCreeper.x) / 2;
+          const ty = (pc.y + nearestCreeper.y) / 2;
+          reaperBlocks.push({ x: tx - 60, y: ty - 10, w: 120, h: 20, timer: 180 });
+          this.blockCooldown = this.form === 'PREDATOR' ? 150 : 300;
+          if (!this.quoteTimer) this.showQuote('막아줄게!', 80);
+          SFX.block && SFX.block();
+        }
 
-      if (d < DRAW_W * 0.8) {
-        nearestCreeper.alive = false;
-        erasedCount++;
-        reaperEraseScore += 100; // 리퍼 크리퍼 포획시 -100점
-        SFX.reaperErase();
-        spawnParticles(nearestCreeper.x, nearestCreeper.y, '#cc00ff', 18);
-        updateUI();
-        if (!this.quoteTimer) this.showQuote('삭제 완료.', 80);
-        systemMsg(`리퍼가 크리퍼 #${nearestCreeper.id}를 포획! -100점`);
-        // ── 리퍼 삭제 보너스: 3마리마다 플레이어에게 속도 부스트 ──
-        reaperDeleteBonus++;
-        if (reaperDeleteBonus % 3 === 0) {
-          player.speedBoost      = true;
-          player.speedBoostTimer = Math.max(player.speedBoostTimer, 120); // 2초
-          spawnParticles(player.x + DRAW_W/2, player.y + DRAW_H/2, '#ffaa00', 16);
-          beep(440,'square',0.12,0.05); beep(660,'square',0.10,0.07,0.06);
-          player.showQuote('리퍼 분노 충전!', 100);
-          systemMsg(`★ 리퍼 삭제 ${reaperDeleteBonus}회 — 속도 부스트 2초 획득! (크리퍼들이 몰린다)`);
-          // 생존 크리퍼들을 플레이어 방향으로 살짝 밀어줌 (포획 기회 증가)
-          for (const c of creepers) {
-            if (!c.alive || c.isEgg) continue;
-            const pc2 = playerRef ? playerRef.center() : null;
-            if (!pc2) continue;
-            const dx2 = pc2.x - (c.x + DRAW_W/2);
-            const dy2 = pc2.y - (c.y + DRAW_H/2);
-            const dd2 = Math.hypot(dx2, dy2) || 1;
-            // 리퍼를 피해 달아나던 크리퍼가 플레이어 방향으로 혼란 이동
-            c.vx += (dx2/dd2) * 0.8;
-            c.vy += (dy2/dd2) * 0.8;
+        // ── 방해 3: 시야 흑화 (스테이지 4+) ──
+        if (stage >= 4 && this.blindCooldown <= 0 && pd < DRAW_W * 5) {
+          playerRef.blindTimer  = 180; // 3초
+          this.blindCooldown    = 600;
+          if (!this.quoteTimer) this.showQuote('눈이 안 보이지?', 100);
+          SFX.blind && SFX.blind();
+        }
+
+        if (!this.quoteTimer && Math.random() < 0.005) {
+          const formHunts = {
+            IDLE:     ['찾았다, 인간.', '숨을 곳 없어.', '다음은 너야.', '락온!'],
+            HUNTER:   ['사냥이 시작됐다.', '더 빠르게 됐어.', '도망쳐 봐.', '이제 진지해.'],
+            PREDATOR: ['종말이 왔다.', '피할 수 없어.', '너의 끝이야.', '예측했어.'],
+          };
+          const pool = formHunts[this.form] || formHunts.IDLE;
+          this.showQuote(pool[Math.floor(Math.random()*pool.length)], 100);
+        }
+      } else if (nearestCreeper) {
+        const dx = (nearestCreeper.x + DRAW_W/2) - (this.x + DRAW_W/2);
+        const dy = (nearestCreeper.y + DRAW_H/2) - (this.y + DRAW_H/2);
+        const d  = Math.hypot(dx, dy);
+        if (d > 1) { this.vx += (dx/d)*effectiveAccel; this.vy += (dy/d)*effectiveAccel; }
+
+        // ── 방해 2: 크리퍼를 플레이어 반대 방향으로 밀어냄 (스테이지 2+) ──
+        if (stage >= 2 && this.pushCooldown <= 0 && pc && d < DRAW_W * 6) {
+          const awayX = nearestCreeper.x - pc.x;
+          const awayY = nearestCreeper.y - pc.y;
+          const awayD = Math.hypot(awayX, awayY) || 1;
+          nearestCreeper.vx += (awayX/awayD) * 4;
+          nearestCreeper.vy += (awayY/awayD) * 4;
+          this.pushCooldown = 180;
+          if (!this.quoteTimer) this.showQuote('저리 가!', 70);
+        }
+
+        if (d < DRAW_W * 0.8) {
+          nearestCreeper.alive = false;
+          erasedCount++;
+          reaperEraseScore += 100; // 리퍼 크리퍼 포획시 -100점
+          this.reaperKills++;
+          SFX.reaperErase();
+          spawnParticles(nearestCreeper.x, nearestCreeper.y, '#cc00ff', 18);
+          updateUI();
+          if (!this.quoteTimer) this.showQuote('삭제 완료.', 80);
+          systemMsg(`리퍼가 크리퍼 #${nearestCreeper.id}를 포획! -100점`);
+          // ── 진화 체크 ──
+          if (this.reaperKills === 3 && this.form === 'IDLE')   this.evolve('HUNTER');
+          if (this.reaperKills === 6 && this.form === 'HUNTER') this.evolve('PREDATOR');
+          // ── 리퍼 삭제 보너스: 3마리마다 플레이어에게 속도 부스트 ──
+          reaperDeleteBonus++;
+          if (reaperDeleteBonus % 3 === 0) {
+            player.speedBoost      = true;
+            player.speedBoostTimer = Math.max(player.speedBoostTimer, 120); // 2초
+            spawnParticles(player.x + DRAW_W/2, player.y + DRAW_H/2, '#ffaa00', 16);
+            beep(440,'square',0.12,0.05); beep(660,'square',0.10,0.07,0.06);
+            player.showQuote('리퍼 분노 충전!', 100);
+            systemMsg(`★ 리퍼 삭제 ${reaperDeleteBonus}회 — 속도 부스트 2초 획득! (크리퍼들이 몰린다)`);
+            // 생존 크리퍼들을 플레이어 방향으로 살짝 밀어줌 (포획 기회 증가)
+            for (const c of creepers) {
+              if (!c.alive || c.isEgg) continue;
+              const pc2 = playerRef ? playerRef.center() : null;
+              if (!pc2) continue;
+              const dx2 = pc2.x - (c.x + DRAW_W/2);
+              const dy2 = pc2.y - (c.y + DRAW_H/2);
+              const dd2 = Math.hypot(dx2, dy2) || 1;
+              // 리퍼를 피해 달아나던 크리퍼가 플레이어 방향으로 혼란 이동
+              c.vx += (dx2/dd2) * 0.8;
+              c.vy += (dy2/dd2) * 0.8;
+            }
           }
         }
       }
@@ -1888,9 +2051,11 @@ class Reaper {
     if (this.dashCooldown     > 0) this.dashCooldown--;
 
     const elapsed  = Math.floor(gameTime / 1800);
-    // 돌진 중엔 속도 3배
+    // 돌진 중엔 속도 3배, 진화 폼 배수 적용
     const dashMult = this.dashing ? 3.0 : 1.0;
-    const curSpeed = Math.min((REAPER_SPEED + elapsed * 0.12 + rcfg.reaperBoost) * dashMult, REAPER_SPEED * 7);
+    const curSpeed = Math.min((REAPER_SPEED + elapsed * 0.12 + rcfg.reaperBoost) * dashMult * formAccelMult, REAPER_SPEED * 9);
+    // 진화 플래시 타이머 감소
+    if (this.evolveFlash > 0) this.evolveFlash--;
     const spd = Math.hypot(this.vx, this.vy);
     if (spd > curSpeed) { this.vx=(this.vx/spd)*curSpeed; this.vy=(this.vy/spd)*curSpeed; }
     this.flip = this.vx < 0;
@@ -1908,10 +2073,49 @@ class Reaper {
   draw() {
     if (!this.alive) return;
     const rx = Math.round(this.x), ry = Math.round(this.y);
-    const alpha = this.frozenTimer > 0 ? 0.5 : 1;
-    drawSprite(REAPER_SPRITE, REAPER_COLORS, rx, ry, alpha, this.flip);
+
+    // AMBUSH 페이즈: 반투명 잠복 표현
+    const isAmbush = (this.phase === 'AMBUSH' && stage >= 3);
+    const alpha = this.frozenTimer > 0 ? 0.5 : isAmbush ? 0.35 : 1;
+
+    // 진화 폼에 따른 색상 오버라이드
+    let colorMap = REAPER_COLORS;
+    if (this.form === 'HUNTER') {
+      colorMap = { 1:'#2a0010', 2:'#882200', 3:'#ff6600', 4:'#333333' };
+    } else if (this.form === 'PREDATOR') {
+      colorMap = { 1:'#1a0000', 2:'#660000', 3:'#ff0000', 4:'#111111' };
+    }
+    drawSprite(REAPER_SPRITE, colorMap, rx, ry, alpha, this.flip);
+
+    // 진화 플래시 글리치 효과
+    if (this.evolveFlash > 0) {
+      ctx.save();
+      ctx.globalAlpha = (this.evolveFlash / 90) * 0.6;
+      const glitchColor = this.form === 'PREDATOR' ? '#ff0000' : '#ff6600';
+      ctx.fillStyle = glitchColor;
+      // 랜덤 노이즈 픽셀
+      for (let i = 0; i < 12; i++) {
+        ctx.fillRect(
+          rx + Math.floor(Math.random() * DRAW_W),
+          ry + Math.floor(Math.random() * DRAW_H),
+          PX, PX
+        );
+      }
+      ctx.restore();
+    }
+
+    // PREDATOR: 잔상 트레일
+    if (this.form === 'PREDATOR') {
+      ctx.save();
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = '#ff0000';
+      ctx.fillRect(rx - this.vx * 2, ry - this.vy * 2, DRAW_W, DRAW_H);
+      ctx.fillRect(rx - this.vx * 4, ry - this.vy * 4, DRAW_W, DRAW_H);
+      ctx.restore();
+    }
+
+    // 프리즈 오버레이
     if (this.frozenTimer > 0) {
-      // 프리즈 오버레이
       ctx.save();
       ctx.globalAlpha = 0.55;
       ctx.fillStyle   = '#00ccff';
@@ -1923,6 +2127,53 @@ class Reaper {
       ctx.fillText('❄', rx + DRAW_W / 2, ry - 4);
       ctx.restore();
     }
+
+    // AMBUSH 잠복 표시
+    if (isAmbush) {
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      ctx.font        = `bold ${PX * 3}px 'Courier New', monospace`;
+      ctx.fillStyle   = '#ff4400';
+      ctx.textAlign   = 'center';
+      ctx.fillText('👁', rx + DRAW_W / 2, ry - 4);
+      ctx.restore();
+    }
+
+    // SWEEP 예고선
+    if (this.sweepWarn > 0) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, this.sweepWarn / 60) * 0.55;
+      ctx.strokeStyle = '#ff2200';
+      ctx.lineWidth   = 2;
+      ctx.setLineDash([6, 6]);
+      const cx2 = rx + DRAW_W / 2, cy2 = ry + DRAW_H / 2;
+      const ext = Math.max(canvas.width, canvas.height) * 2;
+      ctx.beginPath();
+      ctx.moveTo(cx2 - this.sweepDir.vx * ext, cy2 - this.sweepDir.vy * ext);
+      ctx.lineTo(cx2 + this.sweepDir.vx * ext, cy2 + this.sweepDir.vy * ext);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 기억 시스템: 예측 마커 & 점선 원
+    if (this.predicting && this.predictTgt && this.predictMark > 0) {
+      ctx.save();
+      ctx.globalAlpha = (this.predictMark / 90) * 0.55;
+      // 예측 목표 × 마커
+      ctx.font      = `bold ${PX * 4}px 'Courier New', monospace`;
+      ctx.fillStyle = '#ff0066';
+      ctx.textAlign = 'center';
+      ctx.fillText('×', this.predictTgt.x, this.predictTgt.y);
+      // 리퍼 주변 점선 원
+      ctx.strokeStyle = 'rgba(255,0,100,0.45)';
+      ctx.lineWidth   = 1.5;
+      ctx.setLineDash([4, 5]);
+      ctx.beginPath();
+      ctx.arc(rx + DRAW_W/2, ry + DRAW_H/2, DRAW_W * 1.8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     if (this.quoteTimer > 0)
       drawBubble(rx + DRAW_W/2, ry, this.quote, '#cc00ff', false);
   }
@@ -2144,6 +2395,7 @@ let running  = false, reaperSpawned = false;
 let invincible = false;
 let stage = 1, stageClearPending = false;
 let screenShake = 0; // 화면 흔들기 강도 (픽셀)
+const playerHistory = []; // 기억 시스템: 플레이어 최근 좌표 이력 (최대 120프레임)
 
 // ── 하트 게이지 ──
 let playerHearts = 3;
@@ -2571,6 +2823,7 @@ function startStage() {
   stageClearPending = false;
   reaperDeleteBonus = 0;
   trails.length = 0; particles.length = 0;
+  playerHistory.length = 0; // 기억 시스템 리셋
   hitCooldown = 0;
 
   // 30% 확률로 아이템 박스 생성 (스테이지 시작 5초 후)
@@ -3225,6 +3478,7 @@ function restartGame() {
   playerHearts = MAX_HEARTS;
   itemBoxes = [];
   hitCooldown = 0;
+  playerHistory.length = 0;
   // 스킬 초기화
   skillPoints = 0;
   skillLevels.a = 0; skillLevels.b = 0; skillLevels.c = 0;
@@ -3620,14 +3874,20 @@ function loop() {
     for (let gy = 0; gy < canvas.height; gy += 24)
       ctx.fillRect(gx, gy, 1, 1);
 
-  gameTime++;
-  totalTime++;
-  updateUI();
-  tickSkillCooldowns();
-  tickSkillEffects();
-  updateSkillUI();
+   gameTime++;
+   totalTime++;
+   updateUI();
+   tickSkillCooldowns();
+   tickSkillEffects();
+   updateSkillUI();
 
-  // 리퍼 스폰
+   // ── 기억 시스템: 플레이어 좌표 이력 기록 ──
+   if (player) {
+     playerHistory.push({ x: player.x + DRAW_W / 2, y: player.y + DRAW_H / 2 });
+     if (playerHistory.length > 120) playerHistory.shift();
+   }
+
+   // 리퍼 스폰
   const aliveReapers = reapers.filter(r => r.alive).length;
   if (!reaperSpawned && gameTime >= cfg.reaperDelay) {
     reaperSpawned = true;
