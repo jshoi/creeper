@@ -1112,7 +1112,7 @@
     <span style="color:#ffff00">⚡ 스테이지마다 30% 확률로 아이템 출현!</span><br>
     <span style="color:#ff4400">⚠ 리퍼가 방해합니다. 조심하세요!</span>
   </p>
-  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.5.0</p>
+  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.5.1</p>
   <button id="btn-start">[ 시작 ]</button>
 </div>
 
@@ -2771,11 +2771,10 @@ function drawStageGraph() {
   const chartH = H - PAD_T - PAD_B;
   const n = stageHistory.length;
 
-  // 최대값 계산 (caught, erased, time 각각 독립 스케일)
+  // 최대값 계산 (caught, erased)
   const maxCaught = Math.max(...stageHistory.map(h => h.caught), 1);
   const maxErased = Math.max(...stageHistory.map(h => h.erased), 1);
-  const maxTime   = Math.max(...stageHistory.map(h => h.time),   1);
-  const globalMax = Math.max(maxCaught, maxErased, maxTime);
+  const globalMax = Math.max(maxCaught, maxErased);
 
   // 그리드 라인 (4개)
   ctx.strokeStyle = '#1a1a1a';
@@ -2801,9 +2800,9 @@ function drawStageGraph() {
   const groupW = chartW / n;
   const BAR_W  = Math.max(4, Math.floor(groupW * 0.22));
   const GAP    = Math.max(2, Math.floor(groupW * 0.04));
-  const COLORS = ['#00ff41', '#ff4444', '#ffaa00'];
-  const keys   = ['caught', 'erased', 'time'];
-  const maxes  = [maxCaught, maxErased, maxTime];
+  const COLORS = ['#00ff41', '#ff4444'];
+  const keys   = ['caught', 'erased'];
+  const maxes  = [maxCaught, maxErased];
 
   stageHistory.forEach((h, i) => {
     const gx = PAD_L + i * groupW + groupW * 0.1;
