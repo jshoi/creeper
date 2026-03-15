@@ -666,6 +666,235 @@
     }
     #ranking-close:hover  { background: #1a1400; }
     #ranking-close:active { background: #2a2000; }
+
+    /* ── 스킬 버튼 패널 (캔버스 우측 하단 고정) ── */
+    #skill-panel {
+      position: fixed;
+      bottom: 132px; /* ui-bottom(128px) + 4px 여백 */
+      right: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 15;
+    }
+    .skill-btn {
+      width: 52px;
+      height: 52px;
+      background: rgba(0,0,0,0.88);
+      border: 1px solid #336633;
+      color: #00ff41;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 9px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      letter-spacing: 0px;
+      touch-action: manipulation;
+      transition: border-color 0.15s, background 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .skill-btn .sk-icon { font-size: 18px; line-height: 1; }
+    .skill-btn .sk-name { font-size: 8px; color: #00cc33; letter-spacing: 0; text-align: center; }
+    .skill-btn .sk-cd {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 3px;
+      background: #00ff41;
+      transform-origin: left;
+      transition: none;
+    }
+    .skill-btn:hover  { background: rgba(0,40,0,0.95); border-color: #00ff41; }
+    .skill-btn:active { background: rgba(0,60,0,0.95); }
+    .skill-btn.active { border-color: #ffff00; box-shadow: 0 0 8px #ffff00; }
+    .skill-btn.locked {
+      border-color: #222;
+      color: #333;
+      cursor: default;
+    }
+    .skill-btn.locked .sk-icon { opacity: 0.25; }
+    .skill-btn.locked .sk-name { color: #333; }
+    .skill-btn.on-cooldown { border-color: #114411; }
+    .skill-btn .sk-lv {
+      position: absolute;
+      top: 2px; right: 3px;
+      font-size: 8px;
+      color: #ffaa00;
+      letter-spacing: 0;
+    }
+    /* 스킬 포인트 표시 */
+    #skill-sp {
+      position: fixed;
+      bottom: 132px;
+      right: 66px;
+      z-index: 15;
+      font-size: 10px;
+      color: #ffaa00;
+      font-family: 'Courier New', Courier, monospace;
+      background: rgba(0,0,0,0.7);
+      border: 1px solid #443300;
+      padding: 3px 6px;
+      letter-spacing: 1px;
+      display: none;
+    }
+    #skill-sp.has-points {
+      color: #ffdd00;
+      border-color: #ffaa00;
+      box-shadow: 0 0 6px #ffaa00;
+      animation: spPulse 1s infinite;
+    }
+    @keyframes spPulse {
+      0%,100% { box-shadow: 0 0 4px #ffaa00; }
+      50%      { box-shadow: 0 0 12px #ffdd00; }
+    }
+
+    /* ── 스킬 레벨업 오버레이 ── */
+    #skilllevel-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.95);
+      z-index: 70;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 14px;
+      padding: 20px;
+    }
+    #skilllevel-overlay.show { display: flex; }
+    #skilllevel-overlay h2 {
+      font-size: 20px;
+      color: #ffaa00;
+      text-shadow: 0 0 16px #ffaa00;
+      letter-spacing: 3px;
+      text-align: center;
+    }
+    #skilllevel-overlay .sl-sp {
+      font-size: 12px;
+      color: #00cc33;
+      letter-spacing: 2px;
+    }
+    #skilllevel-overlay .sl-skip {
+      font-size: 11px;
+      color: #444;
+      cursor: pointer;
+      letter-spacing: 2px;
+      margin-top: 4px;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+    }
+    #skilllevel-overlay .sl-skip:hover { color: #888; }
+    #skill-cards {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 640px;
+    }
+    .skill-card {
+      background: #050f05;
+      border: 1px solid #336633;
+      padding: 14px 16px;
+      width: 178px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.1s;
+      touch-action: manipulation;
+    }
+    .skill-card:hover  { border-color: #00ff41; background: #0a1a0a; transform: scale(1.03); }
+    .skill-card:active { transform: scale(0.98); }
+    .skill-card.maxed  { border-color: #ffaa00; cursor: default; }
+    .skill-card.maxed:hover { transform: none; }
+    .skill-card .sc-icon { font-size: 24px; margin-bottom: 6px; }
+    .skill-card .sc-line { font-size: 9px; color: #ffaa00; letter-spacing: 2px; margin-bottom: 2px; }
+    .skill-card .sc-name { font-size: 14px; color: #00ff41; font-weight: bold; letter-spacing: 1px; margin-bottom: 6px; }
+    .skill-card .sc-lv   { font-size: 10px; color: #ffaa00; margin-bottom: 6px; letter-spacing: 1px; }
+    .skill-card .sc-desc { font-size: 11px; color: #88cc88; line-height: 1.6; }
+    .skill-card .sc-next { font-size: 10px; color: #44aaff; margin-top: 6px; line-height: 1.5; }
+
+    /* ── 스킬 트리 보기 오버레이 ── */
+    #skilltree-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.97);
+      z-index: 75;
+      align-items: flex-start;
+      justify-content: center;
+      flex-direction: column;
+      gap: 10px;
+      padding: 20px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #skilltree-overlay.show { display: flex; }
+    #skilltree-overlay h2 {
+      font-size: 18px;
+      color: #00ff41;
+      text-shadow: 0 0 12px #00ff41;
+      letter-spacing: 3px;
+      align-self: center;
+      margin-bottom: 4px;
+    }
+    #skilltree-close {
+      align-self: center;
+      margin-top: 10px;
+      background: #001a00;
+      border: 1px solid #00ff41;
+      color: #00ff41;
+      font-family: inherit;
+      font-size: 13px;
+      padding: 12px 36px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      min-height: 44px;
+      touch-action: manipulation;
+    }
+    #skilltree-close:hover { background: #003300; }
+    .tree-line-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 100%;
+      max-width: 600px;
+      align-self: center;
+    }
+    .tree-line-label {
+      font-size: 11px;
+      color: #ffaa00;
+      letter-spacing: 2px;
+      margin-bottom: 2px;
+    }
+    .tree-nodes {
+      display: flex;
+      gap: 8px;
+      flex-wrap: nowrap;
+    }
+    .tree-node {
+      flex: 1;
+      background: #050f05;
+      border: 1px solid #1a3a1a;
+      padding: 10px 8px;
+      min-width: 0;
+    }
+    .tree-node.unlocked { border-color: #00ff41; }
+    .tree-node.current  { border-color: #ffaa00; box-shadow: 0 0 6px #ffaa00; }
+    .tree-node .tn-icon { font-size: 18px; }
+    .tree-node .tn-name { font-size: 11px; color: #00ff41; font-weight: bold; margin: 3px 0 2px; }
+    .tree-node .tn-lv   { font-size: 9px; color: #ffaa00; margin-bottom: 3px; }
+    .tree-node .tn-desc { font-size: 9px; color: #668866; line-height: 1.5; }
+    .tree-arrow { color: #336633; font-size: 14px; align-self: center; padding: 0 2px; }
+    .tree-node.locked { opacity: 0.35; }
+    #skilltree-sp {
+      align-self: center;
+      font-size: 13px;
+      color: #ffaa00;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
   </style>
 </head>
 <body>
@@ -739,6 +968,53 @@
   <div id="intro-btn-wrap" style="display:none">
     <button id="intro-start-btn">[ 시작 ]</button>
   </div>
+</div>
+
+<!-- ── 스킬 버튼 패널 ── -->
+<div id="skill-sp"></div>
+<div id="skill-panel">
+  <!-- A: 추적선 -->
+  <button class="skill-btn locked" id="skill-btn-a" onclick="useSkill('a')">
+    <span class="sk-lv" id="skill-lv-a">Lv0</span>
+    <span class="sk-icon" id="skill-icon-a">📡</span>
+    <span class="sk-name" id="skill-name-a">레이더</span>
+    <div class="sk-cd" id="skill-cd-a" style="transform:scaleX(0)"></div>
+  </button>
+  <!-- B: 방어선 -->
+  <button class="skill-btn locked" id="skill-btn-b" onclick="useSkill('b')">
+    <span class="sk-lv" id="skill-lv-b">Lv0</span>
+    <span class="sk-icon" id="skill-icon-b">🛡</span>
+    <span class="sk-name" id="skill-name-b">방패</span>
+    <div class="sk-cd" id="skill-cd-b" style="transform:scaleX(0)"></div>
+  </button>
+  <!-- C: 방해선 -->
+  <button class="skill-btn locked" id="skill-btn-c" onclick="useSkill('c')">
+    <span class="sk-lv" id="skill-lv-c">Lv0</span>
+    <span class="sk-icon" id="skill-icon-c">🎯</span>
+    <span class="sk-name" id="skill-name-c">유인</span>
+    <div class="sk-cd" id="skill-cd-c" style="transform:scaleX(0)"></div>
+  </button>
+  <!-- 스킬 트리 버튼 -->
+  <button class="skill-btn" id="skill-tree-btn" onclick="showSkillTree()" style="border-color:#334433;">
+    <span class="sk-icon">🌿</span>
+    <span class="sk-name">트리</span>
+  </button>
+</div>
+
+<!-- ── 스킬 레벨업 선택 오버레이 ── -->
+<div id="skilllevel-overlay">
+  <h2>[ 스킬 업그레이드 ]</h2>
+  <div class="sl-sp" id="sl-sp-text">스킬 포인트: 1</div>
+  <div id="skill-cards"></div>
+  <button class="sl-skip" id="sl-skip-btn">나중에 사용 [ 건너뛰기 ]</button>
+</div>
+
+<!-- ── 스킬 트리 오버레이 ── -->
+<div id="skilltree-overlay">
+  <h2>[ 스킬 트리 ]</h2>
+  <div id="skilltree-sp">스킬 포인트: 0</div>
+  <div class="tree-line-wrap" id="skilltree-content"></div>
+  <button id="skilltree-close">[ 닫기 ]</button>
 </div>
 
 <div id="quiz-overlay">
@@ -1029,6 +1305,13 @@ class Player {
     // 스피드 부스트 아이템
     this.speedBoost     = false;
     this.speedBoostTimer = 0;
+    // 스킬 상태 (initPlayerSkillState에서도 초기화)
+    this.skill_radarTimer   = 0;
+    this.skill_scanTimer    = 0;
+    this.skill_reflectTimer = 0;
+    this.skill_bubbleTimer  = 0;
+    this.skill_lureTimer    = 0;
+    this.skill_bombTimer    = 0;
   }
   showQuote(text, d) { this.quote = text; this.quoteTimer = d || 180; }
   update() {
@@ -1045,6 +1328,8 @@ class Player {
     if (this.trailTimer % 4 === 0)
       addTrail(this.x + DRAW_W/2 - PX, this.y + DRAW_H - PX*2, '#003388');
     if (this.quoteTimer > 0) this.quoteTimer--;
+    // 스캔 스킬 활성 중: 시야 차단 무효화
+    if (this.skill_scanTimer > 0 && this.blindTimer > 0) this.blindTimer = 0;
     if (this.blindTimer > 0) { this.blindTimer--; this.blinded = true; }
     else this.blinded = false;
     if (this.scaleTimer > 0) { this.scaleTimer--; }
@@ -1239,6 +1524,21 @@ class Creeper {
         this.vy -= Math.sin(ang) * 1.0;
         // 리퍼 근접: 말풍선 없음 (플레이어 채팅 시에만 반응)
       }
+    }
+
+    // ── 스킬: 유인 — 플레이어 방향으로 크리퍼 끌어당김 ──
+    if (player.skill_lureTimer > 0) {
+      const pullDx = pc.x - (this.x + DRAW_W/2);
+      const pullDy = pc.y - (this.y + DRAW_H/2);
+      const pullD  = Math.hypot(pullDx, pullDy) || 1;
+      this.vx += (pullDx / pullD) * 0.6;
+      this.vy += (pullDy / pullD) * 0.6;
+      this.scared = false; // 두려움 해제
+    }
+
+    // ── 스킬: 폭탄 — 크리퍼 이동 멈춤 ──
+    if (player.skill_bombTimer > 0) {
+      this.vx *= 0.05; this.vy *= 0.05;
     }
 
     // ── 분산 행동: 크리퍼끼리 항상 서로 밀어내며 각자 흩어짐 ──
@@ -2211,7 +2511,15 @@ function triggerStageClear() {
     `STAGE ${stage+1}: 크리퍼 ${nextCfg.creeperCount}마리  리퍼 ${Math.round(nextCfg.reaperDelay/60)}초 후`;
   sc.classList.add('show');
   systemMsg(`STAGE ${stage} 클리어! +${bonus} 보너스. STAGE ${stage+1} 준비 중...`);
-  setTimeout(() => { sc.classList.remove('show'); stage++; startStage(); }, 3000);
+  // 스킬 포인트 지급
+  skillPoints++;
+  updateSkillUI();
+  systemMsg(`★ 스킬 포인트 +1 획득! (현재 ${skillPoints}SP) — 스킬 버튼을 눌러 업그레이드하세요.`);
+  setTimeout(() => {
+    sc.classList.remove('show');
+    // 스킬 레벨업 화면 표시 후 다음 스테이지
+    showSkillLevelUp(() => { stage++; startStage(); });
+  }, 3000);
 }
 
 function startStage() {
@@ -2289,6 +2597,392 @@ function startStage() {
   startBGM();
   requestAnimationFrame(loop);
 }
+
+// ═══════════════════════════════════════════════
+//  스킬 시스템
+// ═══════════════════════════════════════════════
+
+// ── 스킬 정의 ──
+// 각 라인(a/b/c)은 3레벨, 레벨마다 스킬이 강해짐
+// level 0 = 미습득
+const SKILL_DEFS = {
+  a: {
+    line: 'A. 추적선',
+    levels: [
+      { // Lv1
+        name: '레이더',
+        icon: '📡',
+        desc: '포획 반경 +30% (5초)',
+        next: 'Lv2: 스캔 — 시야차단 무효화',
+        cd: 600,          // 쿨다운 프레임 (10초)
+        duration: 300,    // 지속 프레임 (5초)
+        apply(p) {
+          p.skill_radarTimer = 300;
+          player.showQuote('레이더 ON!', 90);
+          systemMsg('스킬: 레이더 — 포획 반경 +30% (5초)');
+          beep(660,'square',0.10,0.06); beep(880,'square',0.08,0.08,0.07);
+        }
+      },
+      { // Lv2
+        name: '스캔',
+        icon: '🔭',
+        desc: '시야차단 무효화 + 포획 반경 +30% (6초)',
+        next: 'Lv3: 진공 — 근접 범위 일괄 포획',
+        cd: 720,
+        duration: 360,
+        apply(p) {
+          p.skill_radarTimer  = 360;
+          p.skill_scanTimer   = 360;
+          player.showQuote('스캔 ON!', 100);
+          systemMsg('스킬: 스캔 — 시야차단 무효화 + 포획 반경 확장 (6초)');
+          beep(660,'square',0.10,0.06); beep(880,'square',0.08,0.08,0.07); beep(1100,'square',0.07,0.10,0.15);
+        }
+      },
+      { // Lv3
+        name: '진공',
+        icon: '🌀',
+        desc: '주변 크리퍼 즉시 전부 포획 (범위: 화면 1/3)',
+        next: null,
+        cd: 1800,
+        duration: 0,
+        apply(p) {
+          const pc2 = player.center();
+          const vacRange = Math.min(canvas.width, canvas.height) * 0.35;
+          let cnt = 0;
+          for (const c of creepers) {
+            if (!c.alive || c.isEgg) continue;
+            const dd = Math.hypot((c.x+DRAW_W/2) - pc2.x, (c.y+DRAW_H/2) - pc2.y);
+            if (dd < vacRange) {
+              c.alive = false;
+              caughtCount++;
+              spawnParticles(c.x + DRAW_W/2, c.y + DRAW_H/2, '#00ff41', 18);
+              const rep2 = ['빨려들어가!','이게 무슨 힘이야!','잡혔어...'][Math.floor(Math.random()*3)];
+              creeperMsg(rep2);
+              cnt++;
+            }
+          }
+          screenShake = 10;
+          player.showQuote(`진공! x${cnt}`, 120);
+          systemMsg(`스킬: 진공 — 크리퍼 ${cnt}마리 즉시 포획!`);
+          SFX.catch(); setTimeout(()=>SFX.catch(),120); setTimeout(()=>SFX.catch(),240);
+          beep(200,'sawtooth',0.18,0.5,0,600);
+          updateUI();
+        }
+      },
+    ]
+  },
+  b: {
+    line: 'B. 방어선',
+    levels: [
+      { // Lv1
+        name: '방패',
+        icon: '🛡',
+        desc: '피격 무적 시간 +2초 (즉시)',
+        next: 'Lv2: 반사 — 리퍼 피격시 반격',
+        cd: 480,
+        duration: 120,
+        apply(p) {
+          hitCooldown = Math.max(hitCooldown, 240); // 4초 무적
+          player.showQuote('방패 ON!', 90);
+          systemMsg('스킬: 방패 — 피격 무적 +2초');
+          beep(300,'square',0.12,0.08); beep(500,'square',0.10,0.06,0.09);
+        }
+      },
+      { // Lv2
+        name: '반사',
+        icon: '⚡',
+        desc: '리퍼 피격 시 리퍼 강하게 밀어냄 + 무적 +2초 (8초)',
+        next: 'Lv3: 버블 — 2초 완전 무적 버블',
+        cd: 600,
+        duration: 480,
+        apply(p) {
+          p.skill_reflectTimer = 480;
+          hitCooldown = Math.max(hitCooldown, 240);
+          player.showQuote('반사 ON!', 100);
+          systemMsg('스킬: 반사 — 리퍼 피격 반격 활성화 (8초)');
+          beep(300,'square',0.12,0.08); beep(500,'square',0.10,0.06,0.09); beep(700,'square',0.08,0.08,0.18);
+        }
+      },
+      { // Lv3
+        name: '버블',
+        icon: '💎',
+        desc: '2초간 완전 무적 버블 (모든 피격 무효)',
+        next: null,
+        cd: 900,
+        duration: 120,
+        apply(p) {
+          p.skill_bubbleTimer = 120; // 2초 완전 무적
+          player.showQuote('버블 무적!', 120);
+          systemMsg('스킬: 버블 — 2초 완전 무적!');
+          beep(440,'square',0.15,0.15); beep(880,'square',0.12,0.12,0.16); beep(1320,'square',0.10,0.10,0.32);
+        }
+      },
+    ]
+  },
+  c: {
+    line: 'C. 방해선',
+    levels: [
+      { // Lv1
+        name: '유인',
+        icon: '🎯',
+        desc: '크리퍼들을 플레이어 방향으로 유인 (4초)',
+        next: 'Lv2: 교란 — 리퍼 속도 50% 감소',
+        cd: 540,
+        duration: 240,
+        apply(p) {
+          p.skill_lureTimer = 240;
+          player.showQuote('유인 ON!', 90);
+          systemMsg('스킬: 유인 — 크리퍼들이 가까이 옵니다 (4초)');
+          beep(440,'sawtooth',0.08,0.10); beep(550,'sawtooth',0.07,0.12,0.11);
+        }
+      },
+      { // Lv2
+        name: '교란',
+        icon: '📻',
+        desc: '리퍼 이동속도 50% 감소 (5초)',
+        next: 'Lv3: 폭탄 — 화면 전체 크리퍼 잠시 멈춤',
+        cd: 720,
+        duration: 300,
+        apply(p) {
+          p.skill_lureTimer = 240;
+          for (const r of reapers) {
+            if (r.alive) r.frozenTimer = Math.max(r.frozenTimer, 150); // 2.5초 느려짐
+          }
+          player.showQuote('교란 ON!', 100);
+          systemMsg('스킬: 교란 — 리퍼 속도 감소 + 크리퍼 유인 (5초)');
+          beep(200,'sawtooth',0.15,0.3,0,100); beep(440,'sawtooth',0.08,0.10,0.35);
+        }
+      },
+      { // Lv3
+        name: '폭탄',
+        icon: '💣',
+        desc: '화면 전체 크리퍼 3초간 멈춤 + 리퍼 혼란',
+        next: null,
+        cd: 1500,
+        duration: 180,
+        apply(p) {
+          p.skill_bombTimer = 180; // 크리퍼 멈춤 프레임
+          for (const r of reapers) {
+            if (r.alive) r.frozenTimer = Math.max(r.frozenTimer, 180);
+          }
+          screenShake = 14;
+          player.showQuote('네트워크 폭탄!', 120);
+          systemMsg('스킬: 네트워크 폭탄 — 전체 크리퍼 3초 멈춤!');
+          beep(100,'sawtooth',0.25,0.6,0,40); beep(200,'square',0.18,0.4,0.3,60); beep(400,'square',0.12,0.3,0.7,80);
+          spawnParticles(canvas.width/2, canvas.height/2, '#ff8800', 50);
+        }
+      },
+    ]
+  }
+};
+
+// ── 스킬 상태 ──
+let skillPoints = 0;
+const skillLevels = { a: 0, b: 0, c: 0 };   // 각 라인 현재 레벨 (0=미습득)
+const skillCooldowns = { a: 0, b: 0, c: 0 }; // 쿨다운 남은 프레임
+
+// ── 스킬 버튼 UI 업데이트 ──
+function updateSkillUI() {
+  const spEl = document.getElementById('skill-sp');
+  spEl.textContent = `SP ${skillPoints}`;
+  spEl.style.display = 'block';
+  spEl.classList.toggle('has-points', skillPoints > 0);
+
+  ['a','b','c'].forEach(line => {
+    const lv  = skillLevels[line];
+    const btn = document.getElementById(`skill-btn-${line}`);
+    const lvEl   = document.getElementById(`skill-lv-${line}`);
+    const iconEl = document.getElementById(`skill-icon-${line}`);
+    const nameEl = document.getElementById(`skill-name-${line}`);
+    const cdEl   = document.getElementById(`skill-cd-${line}`);
+
+    if (lv === 0) {
+      btn.className = 'skill-btn locked';
+      lvEl.textContent  = 'Lv0';
+      iconEl.textContent = SKILL_DEFS[line].levels[0].icon;
+      nameEl.textContent = SKILL_DEFS[line].levels[0].name;
+      cdEl.style.transform = 'scaleX(0)';
+      return;
+    }
+
+    const def = SKILL_DEFS[line].levels[lv - 1];
+    const cd  = skillCooldowns[line];
+    const cdRatio = cd > 0 ? (cd / def.cd) : 0;
+
+    lvEl.textContent   = `Lv${lv}`;
+    iconEl.textContent = def.icon;
+    nameEl.textContent = def.name;
+    cdEl.style.transform = `scaleX(${cdRatio})`;
+    cdEl.style.background = cd > 0 ? '#666' : '#00ff41';
+
+    btn.className = 'skill-btn' +
+      (cd > 0 ? ' on-cooldown' : '') +
+      (cd === 0 ? ' active' : '');
+  });
+}
+
+// ── 스킬 사용 ──
+function useSkill(line) {
+  if (!running) return;
+  const lv = skillLevels[line];
+  if (lv === 0) return; // 미습득
+  if (skillCooldowns[line] > 0) return; // 쿨다운 중
+  const def = SKILL_DEFS[line].levels[lv - 1];
+  def.apply(player);
+  skillCooldowns[line] = def.cd;
+  updateSkillUI();
+}
+
+// ── 스킬 쿨다운 프레임마다 감소 (loop에서 호출) ──
+function tickSkillCooldowns() {
+  ['a','b','c'].forEach(line => {
+    if (skillCooldowns[line] > 0) skillCooldowns[line]--;
+  });
+}
+
+// ── 스킬 효과 틱 (loop에서 매 프레임 호출) ──
+function tickSkillEffects() {
+  // A 라인: 레이더/스캔 타이머
+  if (player.skill_radarTimer  > 0) player.skill_radarTimer--;
+  if (player.skill_scanTimer   > 0) player.skill_scanTimer--;
+  // B 라인: 반사/버블 타이머
+  if (player.skill_reflectTimer > 0) player.skill_reflectTimer--;
+  if (player.skill_bubbleTimer  > 0) player.skill_bubbleTimer--;
+  // C 라인: 유인/폭탄 타이머
+  if (player.skill_lureTimer  > 0) player.skill_lureTimer--;
+  if (player.skill_bombTimer  > 0) player.skill_bombTimer--;
+}
+
+// ── Player에 스킬 상태 초기화 (startGameFromIntro에서 호출) ──
+function initPlayerSkillState() {
+  player.skill_radarTimer   = 0;
+  player.skill_scanTimer    = 0;
+  player.skill_reflectTimer = 0;
+  player.skill_bubbleTimer  = 0;
+  player.skill_lureTimer    = 0;
+  player.skill_bombTimer    = 0;
+}
+
+// ── 스킬 레벨업 화면 표시 ──
+function showSkillLevelUp(onClose) {
+  if (skillPoints <= 0) { onClose && onClose(); return; }
+
+  const spEl = document.getElementById('sl-sp-text');
+  spEl.textContent = `스킬 포인트: ${skillPoints}`;
+
+  const cardsEl = document.getElementById('skill-cards');
+  cardsEl.innerHTML = '';
+
+  ['a','b','c'].forEach(line => {
+    const lv  = skillLevels[line];
+    const def = SKILL_DEFS[line];
+
+    const card = document.createElement('div');
+    card.className = 'skill-card' + (lv >= 3 ? ' maxed' : '');
+
+    const nextDef = lv < 3 ? def.levels[lv] : null; // 다음 레벨 스킬 (lv == 0 이면 첫 스킬)
+
+    if (lv >= 3) {
+      card.innerHTML = `
+        <div class="sc-icon">${def.levels[2].icon}</div>
+        <div class="sc-line">${def.line}</div>
+        <div class="sc-name">${def.levels[2].name}</div>
+        <div class="sc-lv">★ MAX LV3 ★</div>
+        <div class="sc-desc">완전 습득 완료</div>
+      `;
+    } else {
+      card.innerHTML = `
+        <div class="sc-icon">${nextDef.icon}</div>
+        <div class="sc-line">${def.line}</div>
+        <div class="sc-name">${nextDef.name}</div>
+        <div class="sc-lv">${lv === 0 ? '신규 습득' : `Lv${lv} → Lv${lv+1}`}</div>
+        <div class="sc-desc">${nextDef.desc}</div>
+        ${nextDef.next ? `<div class="sc-next">다음: ${nextDef.next}</div>` : '<div class="sc-next">★ 최고 레벨</div>'}
+      `;
+      card.addEventListener('click', () => {
+        skillLevels[line]++;
+        skillPoints--;
+        updateSkillUI();
+        // 포인트가 남아있으면 다시 표시
+        if (skillPoints > 0) {
+          showSkillLevelUp(onClose);
+        } else {
+          document.getElementById('skilllevel-overlay').classList.remove('show');
+          onClose && onClose();
+        }
+        systemMsg(`스킬 습득: ${def.line} — ${nextDef.name} Lv${skillLevels[line]}`);
+      });
+    }
+    cardsEl.appendChild(card);
+  });
+
+  document.getElementById('skilllevel-overlay').classList.add('show');
+
+  // 건너뛰기 버튼
+  const skipBtn = document.getElementById('sl-skip-btn');
+  skipBtn.onclick = () => {
+    document.getElementById('skilllevel-overlay').classList.remove('show');
+    onClose && onClose();
+  };
+}
+
+// ── 스킬 트리 보기 ──
+function showSkillTree() {
+  const spEl = document.getElementById('skilltree-sp');
+  spEl.textContent = `스킬 포인트: ${skillPoints}`;
+
+  const content = document.getElementById('skilltree-content');
+  content.innerHTML = '';
+
+  ['a','b','c'].forEach(line => {
+    const lv  = skillLevels[line];
+    const def = SKILL_DEFS[line];
+
+    const wrap = document.createElement('div');
+    wrap.className = 'tree-line-wrap';
+    wrap.style.marginBottom = '10px';
+
+    const label = document.createElement('div');
+    label.className = 'tree-line-label';
+    label.textContent = def.line;
+    wrap.appendChild(label);
+
+    const nodes = document.createElement('div');
+    nodes.className = 'tree-nodes';
+
+    def.levels.forEach((lvDef, idx) => {
+      if (idx > 0) {
+        const arrow = document.createElement('span');
+        arrow.className = 'tree-arrow';
+        arrow.textContent = '→';
+        nodes.appendChild(arrow);
+      }
+      const node = document.createElement('div');
+      const isUnlocked = lv > idx;
+      const isCurrent  = lv === idx + 1;
+      node.className = 'tree-node' +
+        (isUnlocked ? ' unlocked' : '') +
+        (isCurrent  ? ' current'  : '') +
+        (!isUnlocked && !isCurrent ? ' locked' : '');
+      node.innerHTML = `
+        <div class="tn-icon">${lvDef.icon}</div>
+        <div class="tn-name">${lvDef.name}</div>
+        <div class="tn-lv">Lv${idx+1}${isCurrent ? ' ★현재' : (isUnlocked ? ' ✓' : '')}</div>
+        <div class="tn-desc">${lvDef.desc}</div>
+      `;
+      nodes.appendChild(node);
+    });
+
+    wrap.appendChild(nodes);
+    content.appendChild(wrap);
+  });
+
+  document.getElementById('skilltree-overlay').classList.add('show');
+}
+
+document.getElementById('skilltree-close').addEventListener('click', () => {
+  document.getElementById('skilltree-overlay').classList.remove('show');
+});
 
 // ═══════════════════════════════════════════════
 //  퀴즈 시스템 — 이어하기 챌린지
@@ -2500,6 +3194,12 @@ function restartGame() {
   playerHearts = MAX_HEARTS;
   itemBoxes = [];
   hitCooldown = 0;
+  // 스킬 초기화
+  skillPoints = 0;
+  skillLevels.a = 0; skillLevels.b = 0; skillLevels.c = 0;
+  skillCooldowns.a = 0; skillCooldowns.b = 0; skillCooldowns.c = 0;
+  initPlayerSkillState();
+  updateSkillUI();
   player.x  = canvas.width * 0.2;
   player.y  = canvas.height / 2 - DRAW_H / 2;
   player.tx = player.x; player.ty = player.y;
@@ -2881,6 +3581,9 @@ function loop() {
   gameTime++;
   totalTime++;
   updateUI();
+  tickSkillCooldowns();
+  tickSkillEffects();
+  updateSkillUI();
 
   // 리퍼 스폰
   const aliveReapers = reapers.filter(r => r.alive).length;
@@ -2902,10 +3605,18 @@ function loop() {
 
   // 포획 (무적 중 불가)
   const pc = player.center();
+  // 레이더/스캔 스킬: 포획 반경 보너스
+  const radarBonus = player.skill_radarTimer > 0 ? 1.3 : 1.0;
   for (const c of creepers) {
     if (!c.alive) continue;
     if (invincible) continue;
-    if (c.hitTest(pc.x, pc.y)) {
+    // 포획 판정: 레이더 스킬 시 반경 확장
+    const cs2 = c.scale * radarBonus;
+    const ccx2 = c.x + (DRAW_W * c.scale) / 2;
+    const ccy2 = c.y + (DRAW_H * c.scale) / 2;
+    const hitRadius2 = (DRAW_W * cs2) * 0.85;
+    if (Math.hypot(pc.x - ccx2, pc.y - ccy2) >= hitRadius2) continue;
+    {
       c.alive = false;
 
       // ── Egg 파괴: 30% 확률로 플레이어 크기 증가 ──
@@ -2982,7 +3693,13 @@ function loop() {
     const rdx = r.x + DRAW_W/2 - pc.x;
     const rdy = r.y + DRAW_H/2 - pc.y;
     if (Math.hypot(rdx, rdy) < DRAW_W * 0.85) {
-      if (invincible) {
+      // 버블 스킬: 완전 무적 — 리퍼를 강하게 밀어냄
+      if (player.skill_bubbleTimer > 0) {
+        const ang = Math.atan2(rdy, rdx);
+        r.vx += Math.cos(ang) * 8;
+        r.vy += Math.sin(ang) * 8;
+        spawnParticles(r.x + DRAW_W/2, r.y + DRAW_H/2, '#00ccff', 12);
+      } else if (invincible) {
         const ang = Math.atan2(rdy, rdx);
         r.vx += Math.cos(ang) * 3;
         r.vy += Math.sin(ang) * 3;
@@ -3007,8 +3724,14 @@ function loop() {
         }
         // 리퍼를 뒤로 밀어냄
         const ang = Math.atan2(rdy, rdx);
-        r.vx += Math.cos(ang) * 5;
-        r.vy += Math.sin(ang) * 5;
+        // 반사 스킬: 반격 강화
+        const reflectMult = player.skill_reflectTimer > 0 ? 4.0 : 1.0;
+        r.vx += Math.cos(ang) * 5 * reflectMult;
+        r.vy += Math.sin(ang) * 5 * reflectMult;
+        if (player.skill_reflectTimer > 0) {
+          spawnParticles(r.x + DRAW_W/2, r.y + DRAW_H/2, '#ffaa00', 20);
+          systemMsg('반사 스킬 — 리퍼 강하게 밀어냄!');
+        }
       }
     }
   }
@@ -3059,6 +3782,28 @@ function loop() {
     if (invincible) hudY = 58;
     if (player.blinded) hudY = (invincible ? 76 : 58);
     ctx.fillText(`SPEED UP ${remain}s`, canvas.width / 2, hudY);
+  }
+  // 스킬 HUD
+  {
+    let skillHudY = canvas.height - 30;
+    const skillHuds = [];
+    if (player.skill_bubbleTimer  > 0) skillHuds.push(`💎 버블 ${Math.ceil(player.skill_bubbleTimer/60)}s`);
+    if (player.skill_radarTimer   > 0) skillHuds.push(`📡 레이더 ${Math.ceil(player.skill_radarTimer/60)}s`);
+    if (player.skill_reflectTimer > 0) skillHuds.push(`⚡ 반사 ${Math.ceil(player.skill_reflectTimer/60)}s`);
+    if (player.skill_lureTimer    > 0) skillHuds.push(`🎯 유인 ${Math.ceil(player.skill_lureTimer/60)}s`);
+    if (player.skill_bombTimer    > 0) skillHuds.push(`💣 폭탄 ${Math.ceil(player.skill_bombTimer/60)}s`);
+    if (skillHuds.length > 0) {
+      ctx.save();
+      ctx.font      = `bold 11px 'Courier New', monospace`;
+      ctx.fillStyle = '#ffdd00';
+      ctx.shadowColor = '#ffaa00';
+      ctx.shadowBlur  = 6;
+      ctx.textAlign = 'left';
+      skillHuds.forEach((txt, i) => {
+        ctx.fillText(txt, 8, skillHudY - i * 16);
+      });
+      ctx.restore();
+    }
   }
   // hitCooldown 중 무적 표시
   if (hitCooldown > 0 && !invincible) {
@@ -3159,6 +3904,12 @@ function startGameFromIntro() {
   itemBoxes    = [];
   caughtCount  = 0; erasedCount = 0; reaperEraseScore = 0;
   totalTime    = 0;
+  // 스킬 초기화
+  skillPoints = 0;
+  skillLevels.a = 0; skillLevels.b = 0; skillLevels.c = 0;
+  skillCooldowns.a = 0; skillCooldowns.b = 0; skillCooldowns.c = 0;
+  initPlayerSkillState();
+  updateSkillUI();
   updateHeartsUI();
   getAudio(); resumeAudio();
 
