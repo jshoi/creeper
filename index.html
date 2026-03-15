@@ -688,6 +688,7 @@
     .rank-name { color: #00ff41; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .rank-name.me { color: #ffff00; text-shadow: 0 0 6px #ffff00; }
     .rank-score { color: #ffffff; font-weight: bold; min-width: 60px; text-align: right; }
+    .rank-date  { color: #444; font-size: 10px; min-width: 30px; text-align: right; margin-left: 6px; }
     .rank-empty { color: #333; font-size: 12px; text-align: center; padding: 16px 0; letter-spacing: 2px; }
     #ranking-sub {
       font-size: 12px;
@@ -1111,7 +1112,7 @@
     <span style="color:#ffff00">⚡ 스테이지마다 30% 확률로 아이템 출현!</span><br>
     <span style="color:#ff4400">⚠ 리퍼가 방해합니다. 조심하세요!</span>
   </p>
-  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.4.3</p>
+  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.5.0</p>
   <button id="btn-start">[ 시작 ]</button>
 </div>
 
@@ -2539,54 +2540,72 @@ canvas.addEventListener('click', () => {
 });
 
 // ═══════════════════════════════════════════════
-//  캐릭터명 / 리더보드
+//  캐릭터명 / 리더보드  (파일 기반 API)
 // ═══════════════════════════════════════════════
 let playerName = '';
 let rankingFromQuit = false; // 종료 버튼으로 순위 화면을 열었을 때 true
 
-const LEADERBOARD_KEY = 'creeper_leaderboard_v1';
+const SCORES_API = '/api/scores';
 
-function loadLeaderboard() {
+function getMyRank(name, lb) {
+  const idx = lb.findIndex(e => e.name === name);
+  return idx >= 0 ? idx + 1 : -1;
+}
+
+// 점수를 서버 파일에 저장 (POST /api/scores)
+// 반환: Promise<{lb, rank}>
+async function recordScore(name, score, meta) {
   try {
-    return JSON.parse(localStorage.getItem(LEADERBOARD_KEY) || '[]');
-  } catch(e) { return []; }
-}
-
-function saveLeaderboard(lb) {
-  try { localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(lb)); } catch(e) {}
-}
-
-// 캐릭터명별 최고 점수만 보존, 전체 내림차순 정렬
-function recordScore(name, score) {
-  const lb = loadLeaderboard();
-  const existing = lb.findIndex(e => e.name === name);
-  if (existing >= 0) {
-    if (score > lb[existing].score) lb[existing].score = score;
-  } else {
-    lb.push({ name, score });
+    const res = await fetch(SCORES_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, score, ...meta }),
+    });
+    const data = await res.json();
+    if (data.ok) return { lb: data.scores, rank: data.rank };
+  } catch(e) {
+    console.warn('[recordScore] API 오류, localStorage 폴백:', e.message);
+    // 폴백: localStorage
+    try {
+      const FALLBACK_KEY = 'creeper_leaderboard_v1';
+      const lb = JSON.parse(localStorage.getItem(FALLBACK_KEY) || '[]');
+      const idx = lb.findIndex(e => e.name === name);
+      if (idx >= 0) { if (score > lb[idx].score) lb[idx].score = score; }
+      else lb.push({ name, score });
+      lb.sort((a, b) => b.score - a.score);
+      localStorage.setItem(FALLBACK_KEY, JSON.stringify(lb));
+      return { lb, rank: getMyRank(name, lb) };
+    } catch(e2) {}
   }
-  lb.sort((a, b) => b.score - a.score);
-  saveLeaderboard(lb);
-  return lb;
+  return { lb: [], rank: -1 };
 }
 
-function getMyRank(name, score, lb) {
-  // 내 이름으로 현재 저장된 최고 점수 기준 순위
-  const myBest = lb.find(e => e.name === name);
-  if (!myBest) return -1;
-  return lb.findIndex(e => e.name === name) + 1;
-}
+// 리더보드 API에서 읽어 표시
+async function showRanking(highlightName) {
+  const tableEl  = document.getElementById('ranking-table');
+  const myRankEl = document.getElementById('ranking-my-rank');
+  tableEl.innerHTML = '<div class="rank-empty">로딩 중...</div>';
+  document.getElementById('ranking-overlay').classList.add('show');
 
-function showRanking(highlightName) {
-  const lb = loadLeaderboard();
+  let lb = [];
+  try {
+    const res  = await fetch(SCORES_API);
+    const data = await res.json();
+    if (data.ok) lb = data.scores;
+  } catch(e) {
+    // 폴백: localStorage
+    try {
+      lb = JSON.parse(localStorage.getItem('creeper_leaderboard_v1') || '[]');
+    } catch(e2) { lb = []; }
+  }
+
   const top10 = lb.slice(0, 10);
-  const tableEl = document.getElementById('ranking-table');
   tableEl.innerHTML = '';
 
   if (top10.length === 0) {
     tableEl.innerHTML = '<div class="rank-empty">아직 기록이 없습니다.</div>';
   } else {
-    const medals = ['🥇','🥈','🥉'];
+    const medals    = ['🥇','🥈','🥉'];
     const noClasses = ['gold','silver','bronze'];
     top10.forEach((entry, i) => {
       const row = document.createElement('div');
@@ -2605,22 +2624,31 @@ function showRanking(highlightName) {
       scoreEl.className = 'rank-score';
       scoreEl.textContent = entry.score.toLocaleString();
 
-      row.appendChild(noEl);
-      row.appendChild(nameEl);
-      row.appendChild(scoreEl);
+      // 날짜 표시 (있을 경우)
+      if (entry.date) {
+        const dateEl = document.createElement('div');
+        dateEl.className = 'rank-date';
+        const d = new Date(entry.date);
+        dateEl.textContent = `${d.getMonth()+1}/${d.getDate()}`;
+        row.appendChild(noEl);
+        row.appendChild(nameEl);
+        row.appendChild(scoreEl);
+        row.appendChild(dateEl);
+      } else {
+        row.appendChild(noEl);
+        row.appendChild(nameEl);
+        row.appendChild(scoreEl);
+      }
       tableEl.appendChild(row);
     });
   }
 
-  const myRank = highlightName ? getMyRank(highlightName, 0, lb) : -1;
-  const myRankEl = document.getElementById('ranking-my-rank');
+  const myRank = highlightName ? getMyRank(highlightName, lb) : -1;
   if (highlightName && myRank > 0) {
     myRankEl.textContent = `[ ${highlightName} ] 현재 순위: ${myRank}위`;
   } else {
     myRankEl.textContent = '';
   }
-
-  document.getElementById('ranking-overlay').classList.add('show');
 }
 
 // ═══════════════════════════════════════════════
@@ -2637,7 +2665,7 @@ function getRank(score) {
   return '☆☆☆ 리퍼에게 당함 ☆☆☆';
 }
 
-function triggerGameOver(mode) {
+async function triggerGameOver(mode) {
   const isEnding = (mode === 'ending');
   // 엔딩은 triggerStageClear()가 이미 running=false로 설정 후 호출하므로 가드 예외 처리
   if (!running && !isEnding) return;
@@ -2662,8 +2690,20 @@ function triggerGameOver(mode) {
   const h1   = goEl.querySelector('h1');
   const subs = goEl.querySelectorAll('.go-sub');
 
-  // 점수 저장 (캐릭터명이 있을 때만)
-  if (playerName) recordScore(playerName, score);
+  // 점수 저장 (캐릭터명이 있을 때만) — 파일에 기록
+  if (playerName) {
+    recordScore(playerName, score, {
+      stage,
+      caught: caughtCount,
+      erased: erasedCount,
+      mode: mode || 'gameover',
+    }).then(({ rank }) => {
+      if (rank > 0) {
+        const rankEl = document.getElementById('go-rank');
+        if (rankEl) rankEl.textContent += `  (전체 ${rank}위)`;
+      }
+    });
+  }
 
   if (isEnding) {
     // ── 최종 엔딩 ──
