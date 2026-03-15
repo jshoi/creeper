@@ -479,6 +479,146 @@
       pointer-events: none;
       z-index: 100;
     }
+
+    /* ── 캐릭터명 입력 화면 ── */
+    #name-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.96);
+      z-index: 55;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 18px;
+      padding: 24px;
+    }
+    #name-overlay.show { display: flex; }
+    #name-overlay h2 {
+      font-size: 20px;
+      color: #00ff41;
+      text-shadow: 0 0 16px #00ff41;
+      letter-spacing: 3px;
+      text-align: center;
+    }
+    #name-overlay p {
+      font-size: 12px;
+      color: #00cc33;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+    #name-input {
+      background: #050f05;
+      border: 1px solid #00ff41;
+      color: #00ff41;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 18px;
+      padding: 12px 20px;
+      text-align: center;
+      letter-spacing: 2px;
+      width: 280px;
+      max-width: 90vw;
+      outline: none;
+      caret-color: #00ff41;
+    }
+    #name-input::placeholder { color: #224422; }
+    #name-confirm {
+      background: #001a00;
+      border: 1px solid #00ff41;
+      color: #00ff41;
+      font-family: inherit;
+      font-size: 14px;
+      padding: 14px 40px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      min-height: 48px;
+      touch-action: manipulation;
+    }
+    #name-confirm:hover  { background: #003300; }
+    #name-confirm:active { background: #004400; }
+    #name-error {
+      font-size: 12px;
+      color: #ff4444;
+      min-height: 16px;
+      letter-spacing: 1px;
+    }
+
+    /* ── Top 10 순위 오버레이 ── */
+    #ranking-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.97);
+      z-index: 82;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 10px;
+      padding: 20px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #ranking-overlay.show { display: flex; }
+    #ranking-overlay h2 {
+      font-size: 22px;
+      color: #ffaa00;
+      text-shadow: 0 0 20px #ffaa00;
+      letter-spacing: 4px;
+      margin-bottom: 4px;
+    }
+    #ranking-table {
+      border: 1px solid #ffaa00;
+      padding: 10px 20px;
+      min-width: 300px;
+      max-width: 440px;
+      width: 100%;
+    }
+    .rank-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      border-bottom: 1px solid #222;
+      font-size: 13px;
+      gap: 10px;
+    }
+    .rank-row:last-child { border-bottom: none; }
+    .rank-no  { color: #ffaa00; font-weight: bold; min-width: 28px; }
+    .rank-no.gold   { color: #ffd700; font-size: 15px; }
+    .rank-no.silver { color: #c0c0c0; font-size: 14px; }
+    .rank-no.bronze { color: #cd7f32; font-size: 14px; }
+    .rank-name { color: #00ff41; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rank-name.me { color: #ffff00; text-shadow: 0 0 6px #ffff00; }
+    .rank-score { color: #ffffff; font-weight: bold; min-width: 60px; text-align: right; }
+    .rank-empty { color: #333; font-size: 12px; text-align: center; padding: 16px 0; letter-spacing: 2px; }
+    #ranking-sub {
+      font-size: 12px;
+      color: #006600;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+    #ranking-my-rank {
+      font-size: 14px;
+      color: #ffaa00;
+      letter-spacing: 2px;
+      min-height: 20px;
+      text-align: center;
+    }
+    #ranking-close {
+      margin-top: 10px;
+      background: #0a0a00;
+      border: 1px solid #ffaa00;
+      color: #ffaa00;
+      font-family: inherit;
+      font-size: 13px;
+      padding: 12px 36px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      min-height: 44px;
+      touch-action: manipulation;
+    }
+    #ranking-close:hover  { background: #1a1400; }
+    #ranking-close:active { background: #2a2000; }
   </style>
 </head>
 <body>
@@ -521,6 +661,23 @@
   </div>
   <div class="go-rank" id="go-rank"></div>
   <button id="btn-restart">[ 처음부터 시작 ]</button>
+</div>
+
+<div id="name-overlay">
+  <h2>캐릭터 이름 입력</h2>
+  <p>점수가 이 이름으로 순위에 기록됩니다.</p>
+  <input id="name-input" type="text" maxlength="12"
+    placeholder="이름 입력..." autocomplete="off" />
+  <div id="name-error"></div>
+  <button id="name-confirm">[ 게임 시작 ]</button>
+</div>
+
+<div id="ranking-overlay">
+  <h2>[ TOP 10 ]</h2>
+  <div id="ranking-sub">— 역대 최고 점수 순위 —</div>
+  <div id="ranking-table"></div>
+  <div id="ranking-my-rank"></div>
+  <button id="ranking-close">[ 닫기 ]</button>
 </div>
 
 <div id="intro-overlay">
@@ -1274,11 +1431,12 @@ class Reaper {
       if (d < DRAW_W * 0.8) {
         nearestCreeper.alive = false;
         erasedCount++;
+        reaperEraseScore += 100; // 리퍼 크리퍼 포획시 -100점
         SFX.reaperErase();
         spawnParticles(nearestCreeper.x, nearestCreeper.y, '#cc00ff', 18);
         updateUI();
         if (!this.quoteTimer) this.showQuote('삭제 완료.', 80);
-        systemMsg(`리퍼가 크리퍼 #${nearestCreeper.id}를 삭제했습니다.`);
+        systemMsg(`리퍼가 크리퍼 #${nearestCreeper.id}를 포획! -100점`);
         // ── 리퍼 삭제 보너스: 3마리마다 플레이어에게 속도 부스트 ──
         reaperDeleteBonus++;
         if (reaperDeleteBonus % 3 === 0) {
@@ -1599,6 +1757,7 @@ const player = new Player();
 let creepers  = [];
 let reapers   = [];
 let caughtCount = 0, erasedCount = 0;
+let reaperEraseScore = 0; // 리퍼 크리퍼 포획으로 인한 누적 감점 (100점/마리)
 let reaperDeleteBonus = 0; // 리퍼 삭제 연속 카운터 (3마다 이점 발동)
 let gameTime = 0, totalTime = 0;
 let running  = false, reaperSpawned = false;
@@ -1656,11 +1815,95 @@ canvas.addEventListener('click', () => {
 });
 
 // ═══════════════════════════════════════════════
+//  캐릭터명 / 리더보드
+// ═══════════════════════════════════════════════
+let playerName = '';
+
+const LEADERBOARD_KEY = 'creeper_leaderboard_v1';
+
+function loadLeaderboard() {
+  try {
+    return JSON.parse(localStorage.getItem(LEADERBOARD_KEY) || '[]');
+  } catch(e) { return []; }
+}
+
+function saveLeaderboard(lb) {
+  try { localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(lb)); } catch(e) {}
+}
+
+// 캐릭터명별 최고 점수만 보존, 전체 내림차순 정렬
+function recordScore(name, score) {
+  const lb = loadLeaderboard();
+  const existing = lb.findIndex(e => e.name === name);
+  if (existing >= 0) {
+    if (score > lb[existing].score) lb[existing].score = score;
+  } else {
+    lb.push({ name, score });
+  }
+  lb.sort((a, b) => b.score - a.score);
+  saveLeaderboard(lb);
+  return lb;
+}
+
+function getMyRank(name, score, lb) {
+  // 내 이름으로 현재 저장된 최고 점수 기준 순위
+  const myBest = lb.find(e => e.name === name);
+  if (!myBest) return -1;
+  return lb.findIndex(e => e.name === name) + 1;
+}
+
+function showRanking(highlightName) {
+  const lb = loadLeaderboard();
+  const top10 = lb.slice(0, 10);
+  const tableEl = document.getElementById('ranking-table');
+  tableEl.innerHTML = '';
+
+  if (top10.length === 0) {
+    tableEl.innerHTML = '<div class="rank-empty">아직 기록이 없습니다.</div>';
+  } else {
+    const medals = ['🥇','🥈','🥉'];
+    const noClasses = ['gold','silver','bronze'];
+    top10.forEach((entry, i) => {
+      const row = document.createElement('div');
+      row.className = 'rank-row';
+      const isMe = entry.name === highlightName;
+
+      const noEl = document.createElement('div');
+      noEl.className = 'rank-no' + (i < 3 ? ' ' + noClasses[i] : '');
+      noEl.textContent = i < 3 ? medals[i] : (i + 1) + '.';
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'rank-name' + (isMe ? ' me' : '');
+      nameEl.textContent = entry.name + (isMe ? ' ◀' : '');
+
+      const scoreEl = document.createElement('div');
+      scoreEl.className = 'rank-score';
+      scoreEl.textContent = entry.score.toLocaleString();
+
+      row.appendChild(noEl);
+      row.appendChild(nameEl);
+      row.appendChild(scoreEl);
+      tableEl.appendChild(row);
+    });
+  }
+
+  const myRank = highlightName ? getMyRank(highlightName, 0, lb) : -1;
+  const myRankEl = document.getElementById('ranking-my-rank');
+  if (highlightName && myRank > 0) {
+    myRankEl.textContent = `[ ${highlightName} ] 현재 순위: ${myRank}위`;
+  } else {
+    myRankEl.textContent = '';
+  }
+
+  document.getElementById('ranking-overlay').classList.add('show');
+}
+
+// ═══════════════════════════════════════════════
 //  Score / Rank
 // ═══════════════════════════════════════════════
 function calcScore() {
   const t = Math.floor(totalTime / 60);
-  return caughtCount * 300 + t * 10 - erasedCount * 50 + (stage - 1) * 500;
+  return caughtCount * 300 + t * 10 - erasedCount * 50 - reaperEraseScore + (stage - 1) * 500;
 }
 function getRank(score) {
   if (score >= 2000) return '★★★ 전설의 포획자 ★★★';
@@ -1691,6 +1934,12 @@ function triggerGameOver(mode) {
   const h1   = goEl.querySelector('h1');
   const subs = goEl.querySelectorAll('.go-sub');
 
+  // 점수 저장 (캐릭터명이 있을 때만)
+  let savedLb = null;
+  if (playerName) {
+    savedLb = recordScore(playerName, score);
+  }
+
   if (isClear) {
     goEl.classList.add('clear');
     h1.textContent      = '네트워크 클리어!';
@@ -1707,6 +1956,11 @@ function triggerGameOver(mode) {
     systemMsg('접속 종료. 리퍼가 승리했습니다.');
   }
   goEl.classList.add('show');
+
+  // 순위 화면: 1.2초 후 표시
+  if (playerName && savedLb) {
+    setTimeout(() => showRanking(playerName), 1200);
+  }
 
   // 게임오버(패배)일 때만 퀴즈 이어하기 제공 (클리어 시 제외)
   if (!isClear) {
@@ -2154,10 +2408,11 @@ document.getElementById('quiz-give-up').addEventListener('click', () => {
 
 function restartGame() {
   document.getElementById('gameover').classList.remove('show', 'clear');
+  document.getElementById('ranking-overlay').classList.remove('show');
   creepers = []; reapers = [];
   reaperBlocks.length = 0;
   stageWalls = []; screenShake = 0;
-  caughtCount = 0; erasedCount = 0;
+  caughtCount = 0; erasedCount = 0; reaperEraseScore = 0;
   gameTime = 0; totalTime = 0; stage = 1;
   reaperSpawned = false; invincible = false;
   stageClearPending = false;
@@ -2773,6 +3028,15 @@ function loop() {
 // ═══════════════════════════════════════════════
 //  Start
 // ═══════════════════════════════════════════════
+// ── 캐릭터명 입력 화면 ──
+function showNameInput() {
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('name-input').value = '';
+  document.getElementById('name-error').textContent = '';
+  document.getElementById('name-overlay').classList.add('show');
+  setTimeout(() => document.getElementById('name-input').focus(), 100);
+}
+
 // ── 인트로 서사 애니메이션 ──
 function showIntro() {
   document.getElementById('overlay').classList.remove('show');
@@ -2807,6 +3071,8 @@ function startGameFromIntro() {
   playerHearts = MAX_HEARTS;
   hitCooldown  = 0;
   itemBoxes    = [];
+  caughtCount  = 0; erasedCount = 0; reaperEraseScore = 0;
+  totalTime    = 0;
   updateHeartsUI();
   getAudio(); resumeAudio();
 
@@ -2821,8 +3087,35 @@ function startGameFromIntro() {
   startStage();
 }
 
-document.getElementById('btn-start').addEventListener('click', showIntro);
+document.getElementById('btn-start').addEventListener('click', showNameInput);
 document.getElementById('intro-start-btn').addEventListener('click', startGameFromIntro);
+
+// 캐릭터명 확인 버튼
+document.getElementById('name-confirm').addEventListener('click', () => {
+  const val = document.getElementById('name-input').value.trim();
+  if (!val) {
+    document.getElementById('name-error').textContent = '이름을 입력해 주세요.';
+    return;
+  }
+  if (val.length > 12) {
+    document.getElementById('name-error').textContent = '12자 이하로 입력해 주세요.';
+    return;
+  }
+  playerName = val;
+  document.getElementById('name-overlay').classList.remove('show');
+  resumeAudio();
+  showIntro();
+});
+
+// 캐릭터명 입력창 Enter 키
+document.getElementById('name-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('name-confirm').click();
+});
+
+// 순위 닫기 버튼 — 닫으면 퀴즈가 이미 뜨거나 게임오버 화면으로 돌아감
+document.getElementById('ranking-close').addEventListener('click', () => {
+  document.getElementById('ranking-overlay').classList.remove('show');
+});
 </script>
 </body>
 </html>
