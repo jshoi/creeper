@@ -1112,7 +1112,7 @@
     <span style="color:#ffff00">⚡ 스테이지마다 30% 확률로 아이템 출현!</span><br>
     <span style="color:#ff4400">⚠ 리퍼가 방해합니다. 조심하세요!</span>
   </p>
-  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.5.3</p>
+  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.6.0</p>
   <button id="btn-start">[ 시작 ]</button>
 </div>
 
@@ -1373,11 +1373,15 @@ class Player {
     this.skill_bubbleTimer  = 0;
     this.skill_lureTimer    = 0;
     this.skill_bombTimer    = 0;
+    // ── 바이러스 슬로우 ──
+    this.virusSlowTimer = 0;
   }
   showQuote(text, d) { this.quote = text; this.quoteTimer = d || 180; }
   update() {
     const prevX = this.x;
-    const lerpSpeed = this.speedBoost ? 0.22 : 0.13;
+    if (this.virusSlowTimer > 0) this.virusSlowTimer--;
+    const virusSlow = this.virusSlowTimer > 0;
+    const lerpSpeed = this.speedBoost ? 0.22 : virusSlow ? 0.055 : 0.13;
     this.x += (this.tx - this.x) * lerpSpeed;
     this.y += (this.ty - this.y) * lerpSpeed;
     // 좌우 벽: 랩핑 — 반대편으로 이동
@@ -1430,6 +1434,17 @@ class Player {
       ctx.shadowBlur  = 12;
       ctx.globalAlpha = 0.7 + Math.sin(Date.now() / 80) * 0.3;
       ctx.strokeRect(rx - 3, ry - 3, DRAW_W + 6, DRAW_H + 6);
+      ctx.restore();
+    }
+    // 바이러스 슬로우 중 핑크 오버레이
+    if (this.virusSlowTimer > 0) {
+      ctx.save();
+      ctx.strokeStyle = '#ff44aa';
+      ctx.lineWidth   = 2;
+      ctx.shadowColor = '#ff44aa';
+      ctx.shadowBlur  = 10;
+      ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 100) * 0.3;
+      ctx.strokeRect(rx - 2, ry - 2, DRAW_W + 4, DRAW_H + 4);
       ctx.restore();
     }
     // 피격 후 무적 중 빨간 점멸
@@ -1524,6 +1539,21 @@ class Creeper {
     // ── 알(Egg) 상태 ──
     this.isEgg      = false;  // true면 부화 전 egg
     this.eggTimer   = 0;      // egg 남은 시간 (120프레임 = 2초)
+
+    // ── 해커 크리퍼 ──
+    this.isHacker        = false; // 해커 크리퍼 여부
+    this.hackerDir       = null;  // 현재 역행 방향 { vx, vy }
+    this.hackerDirTimer  = 0;     // 역행 지속 타이머
+
+    // ── 쉴드 크리퍼 ──
+    this.isShield        = false; // 쉴드 크리퍼 여부 (다른 크리퍼를 보호)
+    this.shieldTarget    = null;  // 보호 대상 Creeper
+    this.shieldAngle     = 0;     // 공전 각도
+    this.shieldAngSpeed  = 0.04 + Math.random() * 0.02; // 공전 속도
+
+    // ── 바이러스 크리퍼 ──
+    this.isVirus         = false; // 바이러스 크리퍼 여부
+    this.virusTrailTimer = 0;     // 발판 오염 트레일 타이머
   }
 
   showQuote(text, d) { this.quote = text; this.quoteTimer = d || 130; }
@@ -1646,6 +1676,46 @@ class Creeper {
       this.vy += Math.sin(randAng) * impulse;
     }
 
+    // ── 해커 크리퍼: 채팅 방향 단어 역이동 ──
+    if (this.isHacker && this.hackerDirTimer > 0) {
+      this.hackerDirTimer--;
+      if (this.hackerDir) {
+        this.vx = this.hackerDir.vx * this.speed * 1.6;
+        this.vy = this.hackerDir.vy * this.speed * 1.6;
+      }
+    }
+
+    // ── 쉴드 크리퍼: 보호 대상 주위 공전 ──
+    if (this.isShield && this.shieldTarget && this.shieldTarget.alive && !this.shieldTarget.isEgg) {
+      this.shieldAngle += this.shieldAngSpeed;
+      const orbitR = DRAW_W * 2.2;
+      const tx = this.shieldTarget.x + DRAW_W/2 + Math.cos(this.shieldAngle) * orbitR - DRAW_W/2;
+      const ty = this.shieldTarget.y + DRAW_H/2 + Math.sin(this.shieldAngle) * orbitR - DRAW_H/2;
+      const sdx = tx - this.x, sdy = ty - this.y;
+      const sd  = Math.hypot(sdx, sdy) || 1;
+      this.vx += (sdx / sd) * 0.9;
+      this.vy += (sdy / sd) * 0.9;
+    } else if (this.isShield && (!this.shieldTarget || !this.shieldTarget.alive)) {
+      // 보호 대상이 사라지면 일반 크리퍼로 복귀
+      this.isShield = false;
+    }
+
+    // ── 바이러스 크리퍼: 발판 오염 흔적 남기기 ──
+    if (this.isVirus) {
+      this.virusTrailTimer++;
+      if (this.virusTrailTimer % 18 === 0) {
+        const vx2 = this.x + DRAW_W / 2, vy2 = this.y + DRAW_H / 2;
+        // 이 위치가 발판 위에 있으면 오염 추가
+        for (const w of stageWalls) {
+          if (vx2 > w.x && vx2 < w.x + w.w && vy2 + DRAW_H/2 > w.y && vy2 - DRAW_H/2 < w.y + w.h + 10) {
+            addVirusStain(vx2, w.y, this.id);
+          }
+        }
+        // 맵 바닥(아무 발판도 없는 경우)에도 짧은 오염 흔적
+        addVirusStain(vx2, vy2, this.id);
+      }
+    }
+
     // 속도 클램프
     const spd    = Math.hypot(this.vx, this.vy);
     const maxSpd = this.scared ? this.speed * 2.2 : this.speed;
@@ -1716,8 +1786,11 @@ class Creeper {
     }
 
     const colors = Object.assign({}, CREEPER_COLORS);
-    if (this.scared)  colors[2] = '#5aff5a';
-    if (this.luring)  colors[2] = '#ffff00'; // 유인 중 노란색
+    if (this.scared)    colors[2] = '#5aff5a';
+    if (this.luring)    colors[2] = '#ffff00'; // 유인 중 노란색
+    if (this.isHacker)  colors[2] = '#00aaff'; // 해커: 밝은 파란색
+    if (this.isShield)  colors[2] = '#aaffff'; // 쉴드: 청록
+    if (this.isVirus)   colors[2] = '#ff44aa'; // 바이러스: 핑크
     const s  = this.scale;
     const dw = Math.round(DRAW_W * s);
     const rx = Math.round(this.x), ry = Math.round(this.y);
@@ -1732,6 +1805,38 @@ class Creeper {
           Math.max(1, Math.round(PX * s)), Math.max(1, Math.round(PX * s))
         );
       }
+    }
+    // ── 해커 크리퍼: HUD 표시 ──
+    if (this.isHacker) {
+      ctx.font = `bold ${PX*2}px 'Courier New', monospace`;
+      ctx.fillStyle = '#00aaff';
+      ctx.shadowColor = '#00aaff'; ctx.shadowBlur = 6;
+      ctx.textAlign = 'center';
+      ctx.fillText('[HACK]', rx + dw/2, ry - 4);
+      ctx.shadowBlur = 0;
+    }
+    // ── 쉴드 크리퍼: 오빗 링 표시 ──
+    if (this.isShield) {
+      ctx.strokeStyle = '#aaffff';
+      ctx.globalAlpha = 0.55 + Math.sin(Date.now()/200) * 0.2;
+      ctx.lineWidth   = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.arc(rx + dw/2, ry + dw/2, dw * 1.1, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
+    // ── 바이러스 크리퍼: 독 파티클 효과 ──
+    if (this.isVirus && Math.random() < 0.2) {
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = '#ff44aa';
+      ctx.fillRect(
+        rx + Math.random() * dw,
+        ry + Math.random() * dw,
+        PX, PX
+      );
+      ctx.globalAlpha = 1;
     }
     ctx.restore();
     if (this.quoteTimer > 0 && !this.isSmall)
@@ -2502,6 +2607,55 @@ let playerHearts = 3;
 const MAX_HEARTS = 3;
 let hitCooldown = 0; // 연속 피격 방지 (60프레임 = 1초)
 
+// ── 바이러스 오염 흔적 시스템 ──
+// { x, y, timer, sourceId }  — timer: 남은 프레임 (600 = 10초)
+let virusStains = [];
+
+function addVirusStain(x, y, sourceId) {
+  // 같은 위치에 중복 방지 (32px 이내면 갱신)
+  for (const s of virusStains) {
+    if (Math.hypot(s.x - x, s.y - y) < 32) { s.timer = 600; return; }
+  }
+  virusStains.push({ x, y, timer: 600, sourceId });
+  if (virusStains.length > 60) virusStains.shift(); // 최대 60개
+}
+
+function updateVirusStains() {
+  for (let i = virusStains.length - 1; i >= 0; i--) {
+    virusStains[i].timer--;
+    if (virusStains[i].timer <= 0) virusStains.splice(i, 1);
+  }
+}
+
+function drawVirusStains() {
+  ctx.save();
+  for (const s of virusStains) {
+    const alpha = Math.min(1, s.timer / 120) * 0.45;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle   = '#ff44aa';
+    ctx.fillRect(s.x - 6, s.y - 6, 12, 12);
+    // 글로우
+    ctx.shadowColor = '#ff44aa';
+    ctx.shadowBlur  = 8;
+    ctx.fillRect(s.x - 3, s.y - 3, 6, 6);
+    ctx.shadowBlur  = 0;
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// 플레이어가 바이러스 흔적 위에 있으면 슬로우 부여
+function checkVirusSlowOnPlayer() {
+  if (!player) return;
+  const pc = player.center();
+  for (const s of virusStains) {
+    if (Math.hypot(pc.x - s.x, pc.y - s.y) < 28) {
+      player.virusSlowTimer = Math.max(player.virusSlowTimer || 0, 90); // 1.5초 슬로우
+      return;
+    }
+  }
+}
+
 // ── 아이템 시스템 ──
 const ITEM_TYPES = [
   { id: 'speed',  label: '⚡ 스피드',  color: '#ffff00', desc: '이동속도 5초 증가' },
@@ -3096,6 +3250,44 @@ function triggerStageClear() {
   }, 3000);
 }
 
+// ── 특수 크리퍼 지정 ──
+// 스테이지에 따라 살아있는 크리퍼 중 일부를 해커/쉴드/바이러스로 지정
+function assignSpecialCreepers() {
+  const alive = creepers.filter(c => c.alive && !c.isSmall && !c.isEgg);
+  if (!alive.length) return;
+
+  // 해커 크리퍼: 스테이지 3+, 1마리 (이미 없을 때만)
+  if (stage >= 3 && !creepers.some(c => c.isHacker && c.alive)) {
+    const idx = Math.floor(Math.random() * alive.length);
+    alive[idx].isHacker = true;
+  }
+
+  // 쉴드 크리퍼: 스테이지 3+, 크리퍼가 3마리 이상일 때
+  if (stage >= 3 && alive.length >= 3 && !creepers.some(c => c.isShield && c.alive)) {
+    const candidates = alive.filter(c => !c.isHacker);
+    if (candidates.length >= 2) {
+      const shieldIdx = Math.floor(Math.random() * candidates.length);
+      const shield    = candidates[shieldIdx];
+      // 보호 대상: 쉴드 크리퍼가 아닌 다른 크리퍼 중 랜덤
+      const targets   = candidates.filter(c => c !== shield);
+      if (targets.length > 0) {
+        const target    = targets[Math.floor(Math.random() * targets.length)];
+        shield.isShield      = true;
+        shield.shieldTarget  = target;
+        target.isShielded    = true; // 보호받는 크리퍼 표시
+      }
+    }
+  }
+
+  // 바이러스 크리퍼: 스테이지 6+, 1마리
+  if (stage >= 6 && !creepers.some(c => c.isVirus && c.alive)) {
+    const virusCandidates = alive.filter(c => !c.isHacker && !c.isShield);
+    if (virusCandidates.length > 0) {
+      virusCandidates[Math.floor(Math.random() * virusCandidates.length)].isVirus = true;
+    }
+  }
+}
+
 function startStage() {
   const cfg = stageConfig(stage);
   creepers = []; reapers = [];
@@ -3124,6 +3316,10 @@ function startStage() {
   player.quote = ''; player.quoteTimer = 0;
   player.blindTimer = 0; player.blinded = false;
   player.scale = 1.0; player.scaleTimer = 0;
+  player.virusSlowTimer = 0;
+
+  // 바이러스 흔적 초기화
+  virusStains.length = 0;
 
   for (let i = 0; i < cfg.creeperCount; i++) {
     const ang = (i / cfg.creeperCount) * Math.PI * 2;
@@ -3140,6 +3336,9 @@ function startStage() {
     // 스테이지 시작 시 크리퍼 말풍선 없음 (채팅 시에만 표시)
   }
 
+  // ── 특수 크리퍼 지정 ──
+  assignSpecialCreepers();
+
   document.getElementById('reaper-warn').style.display = 'none';
   const wp = [
     `══ STAGE ${stage} ══`,
@@ -3150,10 +3349,10 @@ function startStage() {
   ];
   systemMsg(wp.join('  '));
   if (stage === 2) systemMsg('⚠ [MAP: 중앙 섬] 리퍼가 당신을 직접 추격합니다!');
-  if (stage === 3) systemMsg('⚠ [MAP: 이중층] 좌우 교차 발판 등장! 리퍼가 레이저를 발사합니다!');
+  if (stage === 3) systemMsg('⚠ [MAP: 이중층] 좌우 교차 발판 등장! 리퍼가 레이저를 발사합니다! [해커 크리퍼 등장: 채팅 방향이 역전됩니다!] [쉴드 크리퍼 등장: 보호받는 크리퍼를 조심하세요!]');
   if (stage === 4) systemMsg('⚠ [MAP: 삼층구조] 3단 발판! 두 번째 리퍼 등장! 시야 차단 주의!');
   if (stage === 5) systemMsg('⚠ [MAP: 십자형] 리퍼가 크리퍼를 텔레포트합니다! 자손은 알(Egg) 형태!');
-  if (stage === 6) systemMsg('⚠ [MAP: 계단형] 리퍼가 화면을 흔듭니다!');
+  if (stage === 6) systemMsg('⚠ [MAP: 계단형] 리퍼가 화면을 흔듭니다! [바이러스 크리퍼 등장: 오염 흔적은 이동을 늦춥니다!]');
   if (stage === 7) systemMsg('⚠ [MAP: 우물형] 리퍼 돌진 시작!');
   if (stage === 8) systemMsg('⚠ [MAP: 체커보드] 격자 발판! 극한 난이도 시작!');
   if (stage >= 9)  systemMsg(`⚠ [MAP: 완전미로] STAGE ${stage}: 미로를 헤쳐나가라.`);
@@ -4063,12 +4262,58 @@ const RESPONSES = [
       '레이저? 리퍼의 새 전술이야. 움직여!','리퍼도 크리퍼를 지우려 해. 우린 다 피해야 해.'] },
 ];
 
+// ── 해커 크리퍼: 채팅 방향 키워드 매핑 ──
+const HACKER_DIR_MAP = [
+  { keys: ['왼쪽','left','←','좌'], vx: -1, vy:  0 },
+  { keys: ['오른쪽','right','→','우'], vx:  1, vy:  0 },
+  { keys: ['위','up','↑','상'], vx:  0, vy: -1 },
+  { keys: ['아래','down','↓','하'], vx:  0, vy:  1 },
+  { keys: ['피해','dodge','비켜','이동','move'], vx: null, vy: null }, // 랜덤
+];
+
+function applyHackerChatDir(lower) {
+  if (stage < 3) return; // 스테이지 3 미만이면 무효
+  const hackers = creepers.filter(c => c.alive && c.isHacker && !c.isEgg);
+  if (!hackers.length) return;
+
+  for (const entry of HACKER_DIR_MAP) {
+    if (entry.keys.some(k => lower.includes(k))) {
+      let dvx = entry.vx, dvy = entry.vy;
+      if (dvx === null) {
+        // 랜덤 방향 (플레이어 반대)
+        const pc = player.center();
+        hackers.forEach(h => {
+          const adx = (h.x + DRAW_W/2) - pc.x, ady = (h.y + DRAW_H/2) - pc.y;
+          const ad  = Math.hypot(adx, ady) || 1;
+          h.hackerDir      = { vx: adx/ad, vy: ady/ad };
+          h.hackerDirTimer = 90;
+          h.showQuote('역방향!', 80);
+        });
+      } else {
+        // 반대 방향으로 이동 (역심리)
+        hackers.forEach(h => {
+          h.hackerDir      = { vx: -dvx, vy: -dvy };
+          h.hackerDirTimer = 90;
+          h.showQuote('역방향!', 80);
+        });
+      }
+      systemMsg(`[HACKER] 채팅 분석 완료 — 크리퍼가 역방향으로 이동!`);
+      beep(880, 'square', 0.08, 0.04); beep(440, 'square', 0.06, 0.06, 0.05);
+      return;
+    }
+  }
+}
+
 function handleChat(input) {
   const txt = input.trim();
   if (!txt) return;
   playerMsg(txt);
   player.showQuote(txt, 200);
   const lower = txt.toLowerCase();
+
+  // 해커 크리퍼 채팅 반응
+  applyHackerChatDir(lower);
+
   let reply = null;
   for (const r of RESPONSES) {
     if (r.keys.some(k => lower.includes(k))) {
@@ -4203,8 +4448,33 @@ function loop() {
     const ccx2 = c.x + (DRAW_W * c.scale) / 2;
     const ccy2 = c.y + (DRAW_H * c.scale) / 2;
     if (Math.hypot(pc.x - ccx2, pc.y - ccy2) >= captureR) continue;
+
+    // ── 쉴드 보호 판정: 보호받는 크리퍼는 쉴드 크리퍼가 살아있으면 포획 불가 ──
+    if (c.isShielded) {
+      const guardian = creepers.find(s => s.isShield && s.alive && s.shieldTarget === c);
+      if (guardian) {
+        // 보호 중: 포획 실패, 쉴드 크리퍼 말풍선
+        guardian.showQuote('내가 막겠어!', 80);
+        spawnParticles(ccx2, ccy2, '#aaffff', 8);
+        beep(300, 'square', 0.08, 0.05);
+        continue;
+      }
+    }
+
     {
       c.alive = false;
+
+      // 쉴드 크리퍼가 잡혔다면 보호 대상의 isShielded를 해제
+      if (c.isShield && c.shieldTarget) {
+        c.shieldTarget.isShielded = false;
+      }
+      // 잡힌 크리퍼가 해커 크리퍼면 시스템 메시지
+      if (c.isHacker) systemMsg('[HACKER] 해커 크리퍼 포획 — 채팅 역전 해제!');
+      // 잡힌 크리퍼가 바이러스 크리퍼면 오염 흔적 제거
+      if (c.isVirus) {
+        virusStains.length = 0;
+        systemMsg('[VIRUS] 바이러스 크리퍼 포획 — 오염 제거!');
+      }
 
       // ── Egg 파괴: 30% 확률로 플레이어 크기 증가 ──
       if (c.isEgg) {
@@ -4323,10 +4593,16 @@ function loop() {
   }
 
   updateItemBoxes();
+  updateVirusStains();
+  checkVirusSlowOnPlayer();
+
+  // 복제 시 특수 크리퍼 재지정 (스테이지 중간 복제 포함)
+  if (gameTime % 300 === 0) assignSpecialCreepers();
 
   updateTrails();
   drawTrails();
   drawStageWalls();
+  drawVirusStains();
   updateReaperLasers();
   drawItemBoxes();
   player.draw();
@@ -4390,6 +4666,27 @@ function loop() {
       });
       ctx.restore();
     }
+  }
+  // 바이러스 슬로우 HUD
+  if (player.virusSlowTimer > 0) {
+    const remain = Math.ceil(player.virusSlowTimer / 60);
+    ctx.font      = `bold 12px 'Courier New', monospace`;
+    ctx.fillStyle = '#ff44aa';
+    ctx.shadowColor = '#ff44aa';
+    ctx.shadowBlur  = 8;
+    ctx.fillText(`[VIRUS] 슬로우 ${remain}s`, canvas.width / 2, canvas.height - 24);
+    ctx.shadowBlur  = 0;
+  }
+  // 해커 크리퍼 온라인 표시
+  if (stage >= 3 && creepers.some(c => c.alive && c.isHacker)) {
+    ctx.font      = `bold 10px 'Courier New', monospace`;
+    ctx.fillStyle = '#00aaff';
+    ctx.shadowColor = '#00aaff';
+    ctx.shadowBlur  = 6;
+    ctx.textAlign   = 'right';
+    ctx.fillText(`[HACKER ONLINE]`, canvas.width - 8, canvas.height - 8);
+    ctx.textAlign   = 'center';
+    ctx.shadowBlur  = 0;
   }
   // hitCooldown 중 무적 표시
   if (hitCooldown > 0 && !invincible) {
