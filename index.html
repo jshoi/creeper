@@ -1112,7 +1112,7 @@
     <span style="color:#ffff00">⚡ 스테이지마다 30% 확률로 아이템 출현!</span><br>
     <span style="color:#ff4400">⚠ 리퍼가 방해합니다. 조심하세요!</span>
   </p>
-  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.5.2</p>
+  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.5.3</p>
   <button id="btn-start">[ 시작 ]</button>
 </div>
 
@@ -1776,7 +1776,7 @@ class Reaper {
     this.frozenTimer = 0;
 
     // 방해 전술 쿨다운
-    this.laserCooldown    = 180;  // 레이저 발사 쿨다운
+    this.laserCooldown    = 90;   // 레이저 발사 쿨다운 (단축)
     this.pushCooldown     = 0;    // 크리퍼 밀기 쿨다운
     this.blindCooldown    = 300;  // 시야 흑화 쿨다운
     this.teleportCooldown = 400;  // [stage5+] 크리퍼 텔레포트
@@ -1971,22 +1971,29 @@ class Reaper {
         const d  = Math.hypot(dx, dy);
         if (d > 1) { this.vx += (dx/d)*effectiveAccel; this.vy += (dy/d)*effectiveAccel; }
 
-        // ── 방해 1: 레이저 발사 (스테이지 3+) ──
+        // ── 방해 1: 레이저 발사 (스테이지 3+) — 부채꼴 다발 ──
         if (stage >= 3 && this.laserCooldown <= 0 && pc) {
           // 리퍼 중심 → 플레이어 중심 방향 벡터
           const lx  = this.x + DRAW_W / 2;
           const ly  = this.y + DRAW_H / 2;
           const ddx = pc.x - lx, ddy = pc.y - ly;
           const ddd = Math.hypot(ddx, ddy) || 1;
+          const baseAng = Math.atan2(ddy, ddx);
           const spd = 6.5; // 레이저 속도
-          reaperLasers.push({
-            x: lx, y: ly,
-            vx: (ddx / ddd) * spd,
-            vy: (ddy / ddd) * spd,
-            timer: 90, // ~1.5초 수명
-            hit: false,
-          });
-          this.laserCooldown = this.form === 'PREDATOR' ? 120 : (this.form === 'HUNTER' ? 210 : 300);
+          // 발사 수: PREDATOR=5발, HUNTER=4발, IDLE=3발
+          const shotCount = this.form === 'PREDATOR' ? 5 : (this.form === 'HUNTER' ? 4 : 3);
+          const spread    = 0.22; // 부채꼴 반각 (라디안, 약 12.6°)
+          for (let si = 0; si < shotCount; si++) {
+            const ang = baseAng + (si - (shotCount - 1) / 2) * (spread * 2 / (shotCount - 1 || 1));
+            reaperLasers.push({
+              x: lx, y: ly,
+              vx: Math.cos(ang) * spd,
+              vy: Math.sin(ang) * spd,
+              timer: 100, // ~1.7초 수명
+              hit: false,
+            });
+          }
+          this.laserCooldown = this.form === 'PREDATOR' ? 70 : (this.form === 'HUNTER' ? 120 : 180);
           if (!this.quoteTimer) this.showQuote('받아라!', 70);
           SFX.laser && SFX.laser();
         }
@@ -2353,20 +2360,20 @@ function updateReaperLasers() {
 
     // 발광 외곽선
     ctx.strokeStyle = '#ff44cc';
-    ctx.lineWidth   = 6;
+    ctx.lineWidth   = 8;
     ctx.shadowColor = '#ff00aa';
-    ctx.shadowBlur  = 12;
+    ctx.shadowBlur  = 18;
     ctx.beginPath();
-    ctx.moveTo(l.x - l.vx * 3, l.y - l.vy * 3);
+    ctx.moveTo(l.x - l.vx * 8, l.y - l.vy * 8);
     ctx.lineTo(l.x, l.y);
     ctx.stroke();
 
     // 코어 선
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth   = 2;
-    ctx.shadowBlur  = 4;
+    ctx.lineWidth   = 3;
+    ctx.shadowBlur  = 6;
     ctx.beginPath();
-    ctx.moveTo(l.x - l.vx * 3, l.y - l.vy * 3);
+    ctx.moveTo(l.x - l.vx * 8, l.y - l.vy * 8);
     ctx.lineTo(l.x, l.y);
     ctx.stroke();
 
