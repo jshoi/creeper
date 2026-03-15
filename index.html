@@ -811,9 +811,9 @@
     .skill-card .sc-icon { font-size: 24px; margin-bottom: 6px; }
     .skill-card .sc-line { font-size: 9px; color: #ffaa00; letter-spacing: 2px; margin-bottom: 2px; }
     .skill-card .sc-name { font-size: 14px; color: #00ff41; font-weight: bold; letter-spacing: 1px; margin-bottom: 6px; }
-    .skill-card .sc-lv   { font-size: 10px; color: #ffaa00; margin-bottom: 6px; letter-spacing: 1px; }
-    .skill-card .sc-desc { font-size: 11px; color: #88cc88; line-height: 1.6; }
-    .skill-card .sc-next { font-size: 10px; color: #44aaff; margin-top: 6px; line-height: 1.5; }
+    .skill-card .sc-lv   { font-size: 11px; color: #ffdd00; margin-bottom: 6px; letter-spacing: 1px; font-weight: bold; }
+    .skill-card .sc-desc { font-size: 12px; color: #ccffcc; line-height: 1.7; }
+    .skill-card .sc-next { font-size: 11px; color: #66ccff; margin-top: 6px; line-height: 1.5; }
 
     /* ── 스킬 트리 보기 오버레이 ── */
     #skilltree-overlay {
@@ -883,11 +883,13 @@
     .tree-node.unlocked { border-color: #00ff41; }
     .tree-node.current  { border-color: #ffaa00; box-shadow: 0 0 6px #ffaa00; }
     .tree-node .tn-icon { font-size: 18px; }
-    .tree-node .tn-name { font-size: 11px; color: #00ff41; font-weight: bold; margin: 3px 0 2px; }
-    .tree-node .tn-lv   { font-size: 9px; color: #ffaa00; margin-bottom: 3px; }
-    .tree-node .tn-desc { font-size: 9px; color: #668866; line-height: 1.5; }
+    .tree-node .tn-name { font-size: 12px; color: #00ff41; font-weight: bold; margin: 3px 0 2px; }
+    .tree-node .tn-lv   { font-size: 10px; color: #ffdd00; margin-bottom: 3px; font-weight: bold; }
+    .tree-node .tn-desc { font-size: 10px; color: #aaddaa; line-height: 1.6; }
     .tree-arrow { color: #336633; font-size: 14px; align-self: center; padding: 0 2px; }
-    .tree-node.locked { opacity: 0.35; }
+    .tree-node.locked { opacity: 0.45; }
+    .tree-node.locked .tn-name { color: #557755; }
+    .tree-node.locked .tn-desc { color: #779977; }
     #skilltree-sp {
       align-self: center;
       font-size: 13px;
@@ -1385,6 +1387,29 @@ class Player {
     drawLabel(rx + DRAW_W/2, ry, '나', '#44aaff');
     if (this.quoteTimer > 0)
       drawBubble(rx + DRAW_W/2, ry, this.quote, '#44aaff', true);
+
+    // ── 포획 반경 표시 ──
+    const radarMult = this.skill_radarTimer > 0 ? 1.4 : 1.0;
+    const captureR  = (DRAW_W * this.scale) * 0.85 * radarMult;
+    const pc2 = this.center();
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(pc2.x, pc2.y, captureR, 0, Math.PI * 2);
+    if (this.skill_radarTimer > 0) {
+      // 레이더 스킬 활성: 밝은 초록 점선
+      ctx.strokeStyle = '#00ff41';
+      ctx.shadowColor = '#00ff41';
+      ctx.shadowBlur  = 8;
+    } else {
+      ctx.strokeStyle = 'rgba(68,170,255,0.35)';
+      ctx.shadowBlur  = 0;
+    }
+    ctx.lineWidth   = 1;
+    ctx.globalAlpha = 0.55;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
   }
   center() { return { x: this.x + DRAW_W/2, y: this.y + DRAW_H/2 }; }
 }
@@ -1452,7 +1477,6 @@ class Creeper {
       this.eggTimer--;
       if (this.eggTimer <= 0) {
         this.isEgg = false;
-        this.showQuote('부화!', 60);
         spawnParticles(this.x + DRAW_W/2, this.y + DRAW_H/2, '#88ff88', 10);
         SFX.replicate();
       }
@@ -2560,18 +2584,7 @@ function startStage() {
     c.speed         *= cfg.creeperSpeed;
     c.scareRadius    = cfg.scareRadius;
     c.replicateTimer = cfg.replicateTimer + Math.floor(Math.random() * 60);
-    if (i === 0) {
-      const sq = [
-        `스테이지 ${stage}. 복제한다!`,
-        `더 빠르다. 잡아봐!`,
-        `살아남았군? 이번엔 어떨까.`,
-        `스테이지 ${stage}. 우리는 많아.`,
-        `스테이지 ${stage}을 버틸 수 있어?`,
-        `스테이지마다 강해지지.`,
-        `스테이지 ${stage}. 리퍼도 빨라졌어.`,
-      ];
-      c.showQuote(sq[Math.min(stage-1, sq.length-1)], 200);
-    }
+    // 스테이지 시작 시 크리퍼 말풍선 없음 (채팅 시에만 표시)
   }
 
   document.getElementById('reaper-warn').style.display = 'none';
@@ -2612,42 +2625,42 @@ const SKILL_DEFS = {
       { // Lv1
         name: '레이더',
         icon: '📡',
-        desc: '포획 반경 +30% (5초)',
+        desc: '포획 반경 +40% (7초)',
         next: 'Lv2: 스캔 — 시야차단 무효화',
-        cd: 600,          // 쿨다운 프레임 (10초)
-        duration: 300,    // 지속 프레임 (5초)
+        cd: 420,          // 쿨다운 프레임 (7초)
+        duration: 420,    // 지속 프레임 (7초)
         apply(p) {
-          p.skill_radarTimer = 300;
+          p.skill_radarTimer = 420;
           player.showQuote('레이더 ON!', 90);
-          systemMsg('스킬: 레이더 — 포획 반경 +30% (5초)');
+          systemMsg('스킬: 레이더 — 포획 반경 +40% (7초)');
           beep(660,'square',0.10,0.06); beep(880,'square',0.08,0.08,0.07);
         }
       },
       { // Lv2
         name: '스캔',
         icon: '🔭',
-        desc: '시야차단 무효화 + 포획 반경 +30% (6초)',
+        desc: '시야차단 무효화 + 포획 반경 +40% (8초)',
         next: 'Lv3: 진공 — 근접 범위 일괄 포획',
-        cd: 720,
-        duration: 360,
+        cd: 480,
+        duration: 480,
         apply(p) {
-          p.skill_radarTimer  = 360;
-          p.skill_scanTimer   = 360;
+          p.skill_radarTimer  = 480;
+          p.skill_scanTimer   = 480;
           player.showQuote('스캔 ON!', 100);
-          systemMsg('스킬: 스캔 — 시야차단 무효화 + 포획 반경 확장 (6초)');
+          systemMsg('스킬: 스캔 — 시야차단 무효화 + 포획 반경 확장 (8초)');
           beep(660,'square',0.10,0.06); beep(880,'square',0.08,0.08,0.07); beep(1100,'square',0.07,0.10,0.15);
         }
       },
       { // Lv3
         name: '진공',
         icon: '🌀',
-        desc: '주변 크리퍼 즉시 전부 포획 (범위: 화면 1/3)',
+        desc: '주변 크리퍼 즉시 전부 포획 (범위: 화면 45%)',
         next: null,
-        cd: 1800,
+        cd: 1200,
         duration: 0,
         apply(p) {
           const pc2 = player.center();
-          const vacRange = Math.min(canvas.width, canvas.height) * 0.35;
+          const vacRange = Math.min(canvas.width, canvas.height) * 0.45;
           let cnt = 0;
           for (const c of creepers) {
             if (!c.alive || c.isEgg) continue;
@@ -2677,43 +2690,45 @@ const SKILL_DEFS = {
       { // Lv1
         name: '방패',
         icon: '🛡',
-        desc: '피격 무적 시간 +2초 (즉시)',
+        desc: '즉시 5초 무적 + 이동속도 30% 증가',
         next: 'Lv2: 반사 — 리퍼 피격시 반격',
-        cd: 480,
-        duration: 120,
+        cd: 300,
+        duration: 300,
         apply(p) {
-          hitCooldown = Math.max(hitCooldown, 240); // 4초 무적
+          hitCooldown = Math.max(hitCooldown, 360); // 6초 무적
+          p.speedBoost = true;
+          p.speedBoostTimer = Math.max(p.speedBoostTimer, 300); // 5초 스피드
           player.showQuote('방패 ON!', 90);
-          systemMsg('스킬: 방패 — 피격 무적 +2초');
+          systemMsg('스킬: 방패 — 6초 무적 + 이동속도 증가 (5초)');
           beep(300,'square',0.12,0.08); beep(500,'square',0.10,0.06,0.09);
         }
       },
       { // Lv2
         name: '반사',
         icon: '⚡',
-        desc: '리퍼 피격 시 리퍼 강하게 밀어냄 + 무적 +2초 (8초)',
-        next: 'Lv3: 버블 — 2초 완전 무적 버블',
-        cd: 600,
-        duration: 480,
+        desc: '리퍼 피격 시 강하게 반격 + 무적 6초 (10초)',
+        next: 'Lv3: 버블 — 3초 완전 무적 버블',
+        cd: 420,
+        duration: 600,
         apply(p) {
-          p.skill_reflectTimer = 480;
-          hitCooldown = Math.max(hitCooldown, 240);
+          p.skill_reflectTimer = 600;
+          hitCooldown = Math.max(hitCooldown, 360);
           player.showQuote('반사 ON!', 100);
-          systemMsg('스킬: 반사 — 리퍼 피격 반격 활성화 (8초)');
+          systemMsg('스킬: 반사 — 리퍼 피격 반격 활성화 (10초)');
           beep(300,'square',0.12,0.08); beep(500,'square',0.10,0.06,0.09); beep(700,'square',0.08,0.08,0.18);
         }
       },
       { // Lv3
         name: '버블',
         icon: '💎',
-        desc: '2초간 완전 무적 버블 (모든 피격 무효)',
+        desc: '3초간 완전 무적 버블 (모든 피격 무효)',
         next: null,
-        cd: 900,
-        duration: 120,
+        cd: 600,
+        duration: 180,
         apply(p) {
-          p.skill_bubbleTimer = 120; // 2초 완전 무적
+          p.skill_bubbleTimer = 180; // 3초 완전 무적
           player.showQuote('버블 무적!', 120);
-          systemMsg('스킬: 버블 — 2초 완전 무적!');
+          systemMsg('스킬: 버블 — 3초 완전 무적!');
           beep(440,'square',0.15,0.15); beep(880,'square',0.12,0.12,0.16); beep(1320,'square',0.10,0.10,0.32);
         }
       },
@@ -2725,45 +2740,45 @@ const SKILL_DEFS = {
       { // Lv1
         name: '유인',
         icon: '🎯',
-        desc: '크리퍼들을 플레이어 방향으로 유인 (4초)',
-        next: 'Lv2: 교란 — 리퍼 속도 50% 감소',
-        cd: 540,
-        duration: 240,
+        desc: '크리퍼들을 플레이어 방향으로 유인 (6초)',
+        next: 'Lv2: 교란 — 리퍼 정지 + 크리퍼 유인',
+        cd: 360,
+        duration: 360,
         apply(p) {
-          p.skill_lureTimer = 240;
+          p.skill_lureTimer = 360;
           player.showQuote('유인 ON!', 90);
-          systemMsg('스킬: 유인 — 크리퍼들이 가까이 옵니다 (4초)');
+          systemMsg('스킬: 유인 — 크리퍼들이 가까이 옵니다 (6초)');
           beep(440,'sawtooth',0.08,0.10); beep(550,'sawtooth',0.07,0.12,0.11);
         }
       },
       { // Lv2
         name: '교란',
         icon: '📻',
-        desc: '리퍼 이동속도 50% 감소 (5초)',
+        desc: '리퍼 4초 정지 + 크리퍼 유인 (6초)',
         next: 'Lv3: 폭탄 — 화면 전체 크리퍼 잠시 멈춤',
-        cd: 720,
-        duration: 300,
+        cd: 480,
+        duration: 360,
         apply(p) {
-          p.skill_lureTimer = 240;
+          p.skill_lureTimer = 360;
           for (const r of reapers) {
-            if (r.alive) r.frozenTimer = Math.max(r.frozenTimer, 150); // 2.5초 느려짐
+            if (r.alive) r.frozenTimer = Math.max(r.frozenTimer, 240); // 4초 정지
           }
           player.showQuote('교란 ON!', 100);
-          systemMsg('스킬: 교란 — 리퍼 속도 감소 + 크리퍼 유인 (5초)');
+          systemMsg('스킬: 교란 — 리퍼 4초 정지 + 크리퍼 유인 (6초)');
           beep(200,'sawtooth',0.15,0.3,0,100); beep(440,'sawtooth',0.08,0.10,0.35);
         }
       },
       { // Lv3
         name: '폭탄',
         icon: '💣',
-        desc: '화면 전체 크리퍼 3초간 멈춤 + 리퍼 혼란',
+        desc: '화면 전체 크리퍼 4초간 멈춤 + 리퍼 5초 정지',
         next: null,
-        cd: 1500,
-        duration: 180,
+        cd: 900,
+        duration: 240,
         apply(p) {
-          p.skill_bombTimer = 180; // 크리퍼 멈춤 프레임
+          p.skill_bombTimer = 240; // 크리퍼 멈춤 프레임
           for (const r of reapers) {
-            if (r.alive) r.frozenTimer = Math.max(r.frozenTimer, 180);
+            if (r.alive) r.frozenTimer = Math.max(r.frozenTimer, 300); // 5초 정지
           }
           screenShake = 14;
           player.showQuote('네트워크 폭탄!', 120);
@@ -3606,7 +3621,7 @@ function loop() {
   // 포획 (무적 중 불가)
   const pc = player.center();
   // 레이더/스캔 스킬: 포획 반경 보너스
-  const radarBonus = player.skill_radarTimer > 0 ? 1.3 : 1.0;
+  const radarBonus = player.skill_radarTimer > 0 ? 1.4 : 1.0;
   for (const c of creepers) {
     if (!c.alive) continue;
     if (invincible) continue;
@@ -3678,7 +3693,6 @@ function loop() {
         Math.max(0, Math.min(canvas.width  - DRAW_W, c.x + (Math.random()-0.5)*80)),
         Math.max(0, Math.min(canvas.height - DRAW_H, c.y + (Math.random()-0.5)*80))
       );
-      nc.showQuote('복제했다.', 90);
       SFX.replicate();
       systemMsg(`크리퍼 #${c.id} 복제 → 크리퍼 #${nc.id}.`);
       updateUI();
