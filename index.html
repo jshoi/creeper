@@ -751,6 +751,7 @@
     }
     .skill-btn .sk-icon { font-size: 18px; line-height: 1; }
     .skill-btn .sk-name { font-size: 8px; color: #00cc33; letter-spacing: 0; text-align: center; }
+    .skill-btn .sk-key  { font-size: 7px; color: #336633; letter-spacing: 0; text-align: center; margin-top: 1px; }
     .skill-btn .sk-cd {
       position: absolute;
       bottom: 0; left: 0; right: 0;
@@ -1035,24 +1036,27 @@
 <div id="skill-sp"></div>
 <div id="skill-panel">
   <!-- A: 추적선 -->
-  <button class="skill-btn locked" id="skill-btn-a" onclick="useSkill('a')">
+  <button class="skill-btn locked" id="skill-btn-a" onclick="useSkill('a')" title="단축키: Q">
     <span class="sk-lv" id="skill-lv-a">Lv0</span>
     <span class="sk-icon" id="skill-icon-a">📡</span>
     <span class="sk-name" id="skill-name-a">레이더</span>
+    <span class="sk-key">[Q]</span>
     <div class="sk-cd" id="skill-cd-a" style="transform:scaleX(0)"></div>
   </button>
   <!-- B: 방어선 -->
-  <button class="skill-btn locked" id="skill-btn-b" onclick="useSkill('b')">
+  <button class="skill-btn locked" id="skill-btn-b" onclick="useSkill('b')" title="단축키: W">
     <span class="sk-lv" id="skill-lv-b">Lv0</span>
     <span class="sk-icon" id="skill-icon-b">🛡</span>
     <span class="sk-name" id="skill-name-b">방패</span>
+    <span class="sk-key">[W]</span>
     <div class="sk-cd" id="skill-cd-b" style="transform:scaleX(0)"></div>
   </button>
   <!-- C: 방해선 -->
-  <button class="skill-btn locked" id="skill-btn-c" onclick="useSkill('c')">
+  <button class="skill-btn locked" id="skill-btn-c" onclick="useSkill('c')" title="단축키: E">
     <span class="sk-lv" id="skill-lv-c">Lv0</span>
     <span class="sk-icon" id="skill-icon-c">🎯</span>
     <span class="sk-name" id="skill-name-c">유인</span>
+    <span class="sk-key">[E]</span>
     <div class="sk-cd" id="skill-cd-c" style="transform:scaleX(0)"></div>
   </button>
   <!-- 스킬 트리 버튼 -->
@@ -1112,7 +1116,7 @@
     <span style="color:#ffff00">⚡ 스테이지마다 30% 확률로 아이템 출현!</span><br>
     <span style="color:#ff4400">⚠ 리퍼가 방해합니다. 조심하세요!</span>
   </p>
-  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.6.0</p>
+  <p style="font-size:11px;color:#336633;letter-spacing:2px;margin-top:4px;">v1.6.1</p>
   <button id="btn-start">[ 시작 ]</button>
 </div>
 
@@ -4830,6 +4834,19 @@ document.getElementById('name-confirm').addEventListener('click', () => {
 // 캐릭터명 입력창 Enter 키
 document.getElementById('name-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('name-confirm').click();
+});
+
+// ── 스킬 키보드 단축키 (Q/W/E) ──
+// 채팅창 또는 입력창 포커스 중엔 무시
+window.addEventListener('keydown', e => {
+  const tag = document.activeElement && document.activeElement.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  if (!running) return;
+  switch (e.key.toUpperCase()) {
+    case 'Q': e.preventDefault(); useSkill('a'); break;
+    case 'W': e.preventDefault(); useSkill('b'); break;
+    case 'E': e.preventDefault(); useSkill('c'); break;
+  }
 });
 
 // 순위 닫기 버튼
