@@ -3,18 +3,23 @@ import { getSupabase, ScoreRow } from '@/lib/supabase'
 
 // ── GET /api/scores ─────────────────────────────
 export async function GET() {
-  const supabase = getSupabase()
-  const { data, error } = await supabase
-    .from('scores')
-    .select('*')
-    .order('score', { ascending: false })
-    .limit(100)
+  try {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('scores')
+      .select('*')
+      .order('score', { ascending: false })
+      .limit(100)
 
-  if (error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
+    if (error) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true, scores: data ?? [] })
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 })
   }
-
-  return NextResponse.json({ ok: true, scores: data ?? [] })
 }
 
 // ── POST /api/scores ────────────────────────────
@@ -32,7 +37,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'name and score required' }, { status: 400 })
   }
 
-  const supabase = getSupabase()
+  let supabase: ReturnType<typeof getSupabase>
+  try {
+    supabase = getSupabase()
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 })
+  }
 
   // 이름별 최고 점수 upsert (기존보다 높을 때만 갱신)
   const { data: existing } = await supabase
