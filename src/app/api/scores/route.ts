@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, ScoreRow } from '@/lib/supabase'
+import { getSupabase, ScoreRow } from '@/lib/supabase'
 
 // ── GET /api/scores ─────────────────────────────
 export async function GET() {
+  const supabase = getSupabase()
   const { data, error } = await supabase
     .from('scores')
     .select('*')
@@ -31,6 +32,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'name and score required' }, { status: 400 })
   }
 
+  const supabase = getSupabase()
+
   // 이름별 최고 점수 upsert (기존보다 높을 때만 갱신)
   const { data: existing } = await supabase
     .from('scores')
@@ -39,7 +42,6 @@ export async function POST(req: NextRequest) {
     .maybeSingle()
 
   if (existing && existing.score >= score) {
-    // 기존 점수가 더 높으면 순위만 반환
     const { data: lb } = await supabase
       .from('scores')
       .select('*')
