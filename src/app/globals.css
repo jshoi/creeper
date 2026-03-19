@@ -944,3 +944,185 @@
       letter-spacing: 2px;
       margin-bottom: 4px;
     }
+
+    /* ══════════════════════════════════════════
+       멀티플레이 UI
+       ══════════════════════════════════════════ */
+
+    /* ── 이름 입력 화면: 싱글/멀티 버튼 ── */
+    #name-mode-btns {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #name-confirm-single,
+    #name-confirm-multi {
+      background: #001a00;
+      border: 1px solid #00ff41;
+      color: #00ff41;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px;
+      padding: 13px 28px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      min-height: 48px;
+      touch-action: manipulation;
+      transition: background 0.15s;
+    }
+    #name-confirm-single:hover  { background: #003300; }
+    #name-confirm-single:active { background: #004400; }
+    #name-confirm-multi {
+      border-color: #44aaff;
+      color: #44aaff;
+      background: #00091a;
+    }
+    #name-confirm-multi:hover  { background: #001a33; }
+    #name-confirm-multi:active { background: #002244; }
+
+    /* ── 멀티 대기실 오버레이 ── */
+    #multi-lobby-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.97);
+      z-index: 56;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      padding: 24px;
+    }
+    #multi-lobby-overlay.show { display: flex; }
+
+    #multi-lobby-overlay h2 {
+      font-size: 20px;
+      color: #44aaff;
+      text-shadow: 0 0 16px #44aaff;
+      letter-spacing: 4px;
+      text-align: center;
+    }
+    #multi-lobby-sub {
+      font-size: 11px;
+      color: #336666;
+      letter-spacing: 3px;
+      text-align: center;
+    }
+
+    /* ── 플레이어 목록 ── */
+    #multi-player-list {
+      border: 1px solid #1a3344;
+      min-width: 300px;
+      max-width: 440px;
+      width: 100%;
+      min-height: 80px;
+      padding: 8px 0;
+      background: #050e14;
+    }
+    .mp-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 16px;
+      border-bottom: 1px solid #111;
+      gap: 12px;
+    }
+    .mp-row:last-child { border-bottom: none; }
+    .mp-me-row { background: #071018; }
+    .mp-name {
+      color: #88ccff;
+      font-size: 13px;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .mp-me-row .mp-name { color: #44aaff; font-weight: bold; }
+    .mp-me-mark {
+      color: #336688;
+      font-size: 10px;
+      margin-left: 4px;
+      font-style: normal;
+    }
+    .mp-ready-badge {
+      font-size: 10px;
+      color: #00ff41;
+      border: 1px solid #00ff41;
+      padding: 2px 8px;
+      letter-spacing: 2px;
+      white-space: nowrap;
+      animation: readyPulse 1.4s infinite;
+    }
+    @keyframes readyPulse {
+      0%,100% { box-shadow: none; }
+      50%      { box-shadow: 0 0 6px #00ff41; }
+    }
+    .mp-wait-badge {
+      font-size: 10px;
+      color: #445544;
+      border: 1px solid #223322;
+      padding: 2px 8px;
+      letter-spacing: 2px;
+      white-space: nowrap;
+    }
+
+    /* ── 상태 메시지 ── */
+    #multi-status-msg {
+      font-size: 12px;
+      color: #44aaff;
+      letter-spacing: 1px;
+      text-align: center;
+      max-width: 400px;
+      min-height: 18px;
+    }
+
+    /* ── 버튼 그룹 ── */
+    #multi-lobby-btns {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #btn-multi-ready {
+      background: #001a00;
+      border: 1px solid #00ff41;
+      color: #00ff41;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px;
+      padding: 13px 32px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      min-height: 48px;
+      touch-action: manipulation;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    #btn-multi-ready:hover  { background: #003300; }
+    #btn-multi-ready:active { background: #004400; }
+    #btn-multi-leave {
+      background: transparent;
+      border: 1px solid #334433;
+      color: #446644;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 11px;
+      padding: 10px 20px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      min-height: 44px;
+      touch-action: manipulation;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    #btn-multi-leave:hover { color: #ff4444; border-color: #ff4444; }
+
+    /* ── 카운트다운 ── */
+    #multi-countdown {
+      font-size: 52px;
+      color: #00ff41;
+      text-shadow: 0 0 30px #00ff41;
+      letter-spacing: 6px;
+      font-weight: bold;
+      animation: cdPulse 0.9s ease-in-out infinite;
+    }
+    @keyframes cdPulse {
+      0%,100% { transform: scale(1);    opacity: 1;   }
+      50%      { transform: scale(1.18); opacity: 0.75; }
+    }
