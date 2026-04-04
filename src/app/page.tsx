@@ -6,7 +6,7 @@ import { GAME_JS }   from '@/components/gameJs'
 
 // 빌드 시점 버전 — Vercel 배포마다 자동 갱신
 const BUILD_DATE = new Date().toISOString().slice(0, 10).replace(/-/g, '.')
-const VERSION    = `v1.7.0 (${BUILD_DATE})`
+const VERSION    = `v2.0.0 (${BUILD_DATE})`
 
 // 모듈 레벨 플래그 — StrictMode 이중 실행 완전 차단
 let _gameBooted = false
